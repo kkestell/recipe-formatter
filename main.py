@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+from dataclasses import dataclass
 
 import requests
 from bs4 import BeautifulSoup
@@ -13,9 +14,16 @@ from openai.types.chat.completion_create_params import ResponseFormat
 from slugify import slugify
 
 
-system_prompt = """
-Please return the recipe in JSON format with the following structure:
+@dataclass
+class Config:
+    model: str
+    clean: bool
+    verbose: bool
+    timeout: int
+    max_attempts: int
 
+
+system_prompt = """Please return the recipe in JSON format with the following structure:
 ```json
 {
   "title": "Recipe Title",
@@ -32,17 +40,14 @@ Please return the recipe in JSON format with the following structure:
   ],
   "notes": "Optional notes."
 }
-```
-"""
+```"""
 
-clean_prompt = """
-Additionally, please rewrite the recipe to strictly conform to the following guidelines. None of these are optional:
 
+clean_prompt = """Additionally, please rewrite the recipe to strictly conform to the following guidelines. None of these are optional:
 * Fractions must use U+2044 FRACTION SLASH ⁄ e.g. 1⁄2
-* Dimensions must use U+00D7 MULTIPLICATION SIGN × and U+0022 QUOTATION MARK " e.g. 9×13"
-* Temperatures must use U+00B0 DEGREE SIGN ° e.g. 350 °F.
-* All temperatures must be in both Fahrenheit and Celsius e.g. 350 °F (175 °C)
-* When ingredient amounts are standard units e.g. stick of butter, can of beans, etc. also include the relevant measurement e.g. "1 stick (1⁄2 c) unsalted butter"
+* Measurements for cake and pie pans, etc. expressed in inches must use U+0022 QUOTATION MARK " for inches e.g. 9" and rectangular measurements must use U+00D7 MULTIPLICATION SIGN × e.g. 9×13"
+* Temperatures must use U+00B0 DEGREE SIGN ° e.g. 350 °F. All temperatures must be in both Fahrenheit and Celsius e.g. 350 °F (175 °C)
+* When ingredient amounts are packaged units e.g. stick of butter, can of beans, etc. also include the relevant measurement in parentheses e.g. "1 stick (1⁄2 c) unsalted butter" and "1 can (15 oz) black beans"
 * Use the following standard abbreviations ea, c, g, tbsp, tsp, L, ml, oz, lb, kg, pt, qt, gal, fl oz, in, cm, mm, m, ft, °F, °C. Do not use periods after abbreviations.
 * When an amount contains both weight and volume, list both with weight in parentheses _before_ the ingredient e.g. "1 c (120 g) flour" NOT "120 g (1 c) flour" or "1 c flour (120 g)"
 * List ingredients in the order they are used.
@@ -50,22 +55,40 @@ Additionally, please rewrite the recipe to strictly conform to the following gui
 * Remove any notes of when / where the recipe was first published or information about the publisher.
 * Remove any fluffy language, claims about how good the recipe is, personal anecdotes, etc.
 * Rewrite the instructions to be concise and to the point. Do not include unnecessary words or phrases. Assume the reader is an experienced cook and omit anything that is obvious. THIS IS EXTREMELY IMPORTANT!!!
-"""
+* Do not under any circumstances omit any ingredients. Please double check that all ingredients mentioned in the instructions are also listed in the ingredients section, and vice versa."""
 
 
-def rewrite_recipe(recipe_text, model, clean):
+def rewrite_recipe(recipe_text, config):
     prompt = system_prompt
-    if clean:
-        prompt += "\n\n" + clean_prompt
-    client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
-    chat_completion = client.chat.completions.create(
-        messages=[{"role": "system", "content": prompt}, {"role": "user", "content": recipe_text}],
-        model=model,
-        response_format=ResponseFormat(type="json_object"),
-        temperature=0
-    )
-    json_text = chat_completion.choices[0].message.content
-    return json.loads(json_text)
+
+    if config.clean:
+        prompt += "\n" + clean_prompt
+
+    attempt_count = 0
+    max_attempts = config.max_attempts
+
+    while attempt_count < max_attempts:
+        attempt_count += 1
+
+        if config.verbose:
+            print(f"Waiting {config.timeout}s for completion...")
+
+        try:
+            client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "system", "content": prompt}, {"role": "user", "content": recipe_text}],
+                model=config.model,
+                response_format=ResponseFormat(type="json_object"),
+                temperature=0,
+                timeout=config.timeout
+            )
+            json_text = chat_completion.choices[0].message.content
+
+            return json.loads(json_text)
+
+        except TimeoutError:
+            if attempt_count == max_attempts:
+                raise TimeoutError("Failed to receive a response after 3 attempts.")
 
 
 def fetch_and_parse(url):
@@ -108,24 +131,23 @@ def extract_recipe_json(soup):
 def format_recipe(json_data):
     title = json_data.get('name', 'No Title')
     description = json_data.get('description', 'No description available.')
+
     formatted_recipe = f"# {title}\n\n{description}\n\n## Ingredients\n"
     ingredients = json_data.get('recipeIngredient', [])
     for ingredient in ingredients:
         formatted_recipe += f"* {ingredient}\n"
+
     formatted_recipe += "\n## Instructions\n"
     steps = json_data.get('recipeInstructions', [])
     for i, step in enumerate(steps, 1):
         formatted_recipe += f"{i}. {step['text']}\n"
+
     return formatted_recipe
 
 
-
 def extract_recipe_text(soup):
-    # Search through each element in the soup
     for container in soup.find_all():
-        # Check if the container has descendants that contain 'ingredients' and 'instructions'
-        if container.find(string=lambda text: 'ingredients' in text.lower()) and container.find(string=lambda text: 'instructions' in text.lower()):
-            # Return the text from this container
+        if container.find(string=lambda text: 'ingredients' in text.lower()) and (container.find(string=lambda text: 'instructions' in text.lower()) or container.find(string=lambda text: 'directions' in text.lower())):
             return container.get_text(separator=' ', strip=True)
 
 
@@ -209,11 +231,12 @@ def json_to_latex(json_text):
         latex.append(description)
 
     latex.append("\\vspace{1em}")
-    latex.append("\\columnratio{0.4}")
+    latex.append("\\columnratio{0.35}")
     latex.append("\\begin{paracol}{2}")
     latex.append("\\setlength{\\columnsep}{2em}")
     latex.append("\\sloppy")
     latex.append("\\section*{Ingredients}")
+    latex.append("\\raggedright")
     latex.append("\\begin{itemize}[leftmargin=*]")
 
     for ingredient in ingredients:
@@ -270,26 +293,35 @@ def recipe_to_markdown(recipe):
     return markdown
 
 
-def write_output(recipe, output_file=None):
+def write_output(recipe, config, output_file=None):
     if output_file:
         title = slugify(recipe.get('title', 'Recipe'))
-
-        if output_file == '$TITLE.pdf':
-            output_file = f"{title}.pdf"
-        elif output_file == '$TITLE.md':
-            output_file = f"{title}.md"
-
+        output_file = output_file.replace('{title}', title)
         extension = os.path.splitext(output_file)[1]
 
-        if extension == '.pdf':
+        if extension == '.pdf' or extension == '.tex':
             latex = json_to_latex(recipe)
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp_file = os.path.join(temp_dir, 'recipe.tex')
-                with open(temp_file, 'w') as f:
+            if extension == '.tex':
+                with open(output_file, 'w') as f:
                     f.write(latex)
-                subprocess.run(['xelatex', temp_file], cwd=temp_dir)
-                pdf_file = os.path.join(temp_dir, 'recipe.pdf')
-                shutil.move(pdf_file, output_file)
+            else:
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    temp_file = os.path.join(temp_dir, 'recipe.tex')
+                    with open(temp_file, 'w') as f:
+                        f.write(latex)
+                    if config.verbose:
+                        subprocess.run(['xelatex', temp_file], cwd=temp_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    else:
+                        subprocess.run(['xelatex', temp_file], cwd=temp_dir)
+                    pdf_file = os.path.join(temp_dir, 'recipe.pdf')
+                    shutil.move(pdf_file, output_file)
+        elif extension == '.md':
+            with open(output_file, 'w') as f:
+                markdown = recipe_to_markdown(recipe)
+                f.write(markdown)
+        elif extension == '.json':
+            with open(output_file, 'w') as f:
+                json.dump(recipe, f, ensure_ascii=False, indent=4)
         else:
             with open(output_file, 'w') as f:
                 markdown = recipe_to_markdown(recipe)
@@ -306,22 +338,31 @@ def main():
     group.add_argument("-f", "--file", type=str, help="File containing the recipe to process.")
 
     parser.add_argument("-o", "--output", type=str, help="Output file to write the processed recipe. If not provided, print to stdout.")
+
     parser.add_argument("-c", "--clean", action="store_true", help="Clean up the recipe")
+
+    parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
+
     parser.add_argument("-m", "--model", type=str, default="gpt-4-turbo", help="OpenAI model to use for rewriting the recipe.")
+    # TODO
+    parser.add_argument("-p", "--prompt", type=str, help="Prompt to use for cleaning up the recipe (implies --clean)")
+    parser.add_argument("-b", "--built-in-prompt", action="store_true", help="Display the built-in prompt")
 
     args = parser.parse_args()
+
+    config = Config(model=args.model, clean=args.clean, verbose=args.verbose, timeout=30, max_attempts=3)
 
     if args.url:
         recipe = fetch_recipe_from_url(args.url)
     else:
         recipe = read_recipe_from_file(args.file)
 
-    processed_recipe = rewrite_recipe(recipe, args.model, args.clean)
+    processed_recipe = rewrite_recipe(recipe, config)
 
     if args.url:
         processed_recipe['source'] = args.url
 
-    write_output(processed_recipe, args.output)
+    write_output(processed_recipe, config, args.output)
 
 
 if __name__ == "__main__":
