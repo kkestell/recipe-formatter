@@ -48,14 +48,12 @@ Enable verbose mode to display additional information during processing. Default
 
 ## Examples
 
-```
-export OPENAI_API_KEY='your-api-key'
-```
-
 ### PDF
 
 ```
+OPENAI_API_KEY='your-api-key'
 URL='https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478'
+
 rf -u $URL -o example.pdf
 rf -u $URL -o example-cleaned.pdf -c
 ```
@@ -64,11 +62,14 @@ rf -u $URL -o example-cleaned.pdf -c
 |:-----------------------------------:|:---------------------------------------------------:|
 | [example.pdf](examples/example.pdf) | [example-cleaned.pdf](examples/example-cleaned.pdf) |
 
-### Markdown (Normal)
+### Markdown
 
 ```
-rf -u https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing
+rf -u https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing -o example.md
+rf -u https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing -o example-cleaned.md -c
 ```
+
+#### Normal
 
 ```markdown
 # Easy Coleslaw Dressing
@@ -97,11 +98,7 @@ This dressing can be used immediately or stored in the refrigerator for up to a 
 Source: https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing/
 ```
 
-### Markdown (Cleaned)
-
-```
-rf -c -u https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing -o easy-coleslaw-dressing-cleaned.md
-```
+#### Cleaned
 
 ```markdown
 # Easy Coleslaw Dressing
