@@ -59,9 +59,9 @@ rf -u https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-144
 rf -c -u https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478 -o flourless-chocolate-cake-cleaned.pdf
 ```
 
-|            ![](examples/example.jpg)            |                  ![](examples/example-cleaned.jpg)                   |
-|:----------------------------------------------------:|:--------------------------------------------------------------------:|
-| [example.pdf](examples/flourless-chocolate-cake.pdf) | [flourless-chocolate-cake-cleaned.pdf](examples/example-cleaned.pdf) |
+|  ![Example](examples/example.jpg)   | ![Example (Cleaned)](examples/example-cleaned.jpg)  |
+|:-----------------------------------:|:---------------------------------------------------:|
+| [example.pdf](examples/example.pdf) | [example-cleaned.pdf](examples/example-cleaned.pdf) |
 
 ### Markdown (Normal)
 
