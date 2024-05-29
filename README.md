@@ -2,7 +2,7 @@
 
 ## Overview
 
-Uses the OpenAI API to reformat recipes from URLs or local files into markdown or PDF.
+Uses the OpenAI API to reformat a recipe from a URL or local file and converts it into markdown or PDF.
 
 ## Usage
 
@@ -12,9 +12,9 @@ Run the program by specifying either a URL or a file path for the recipe, and op
 
 - `-u, --url URL`: Specify the URL of the recipe to fetch and process.
 - `-f, --file FILE`: Specify the path to a local file containing the recipe.
-- `-o, --output OUTPUT`: Define the output file path for the formatted recipe (supports `.md` and `.pdf`). If not provided, the recipe is formatted as markdown and printed to stdout. If the filename is `$TITLE.pdf`, the filename will be automatically generated based on the recipe title.
+- `-o, --output OUTPUT`: Define the output file path for the formatted recipe (supports `.md` and `.pdf`). If the filename is `$TITLE.pdf` or `$TITLE.md`, the filename will be automatically generated based on the recipe title. If not provided, the recipe is formatted as markdown and printed to stdout.
 - `-m, --model MODEL`: Specify the OpenAI model to use for recipe formatting (default: `gpt-4-turbo`).
-- `-c, --clean`: Rewrite instructions to be more concise, clean up ingredients, and remove unnecessary information.
+- `-c, --clean`: Rewrite instructions to be more concise, clean up ingredients, and remove unnecessary information (default: `false`).
 
 ## Examples
 
@@ -26,7 +26,7 @@ export OPENAI_API_KEY='your-api-key'
 
 ```
 rf -u https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478 -o flourless-chocolate-cake.pdf
-rf -u https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478 -o flourless-chocolate-cake-cleaned.pdf -c
+rf -c -u https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478 -o flourless-chocolate-cake-cleaned.pdf
 ```
 
 |              ![](examples/flourless-chocolate-cake.jpg)               |                  ![](examples/flourless-chocolate-cake-cleaned.jpg)                   |
@@ -69,7 +69,7 @@ Source: https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing/
 ### Markdown (Cleaned)
 
 ```
-rf -u https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing -o easy-coleslaw-dressing-cleaned.md -c
+rf -c -u https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing -o easy-coleslaw-dressing-cleaned.md
 ```
 
 ```markdown
@@ -96,8 +96,26 @@ Source: https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing/
 
 ## Dependencies
 
+### Python
+
+Requires a Python compatible with Nuitka (tested with Python 3.11).
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
 ### Arch
 
 ```
-sudo pacman -Sy texlive
+sudo pacman -Sy texlive adobe-source-serif-fonts
+```
+
+## Installation
+
+Build a self-contained executable (`rf`) using Nuitka and install to `~/.local/bin`:
+
+```
+make install
 ```

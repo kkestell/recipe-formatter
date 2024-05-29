@@ -39,18 +39,17 @@ clean_prompt = """
 Additionally, please rewrite the recipe to strictly conform to the following guidelines. None of these are optional:
 
 * Fractions must use U+2044 FRACTION SLASH ⁄ e.g. 1⁄2
-* Dimensions must use U+00D7 MULTIPLICATION SIGN × e.g. 4×8"
+* Dimensions must use U+00D7 MULTIPLICATION SIGN × and U+0022 QUOTATION MARK " e.g. 9×13"
 * Temperatures must use U+00B0 DEGREE SIGN ° e.g. 350 °F.
-* All temperatures must be in both Fahrenheit and Celsius e.g. "350 °F (175 °C)"
-* All amounts must use standard abbreviations: 1 c, 3 tsp, 4 tbsp, 5 g, 6 qt, 4 ea (for each), 5 g, 6 ml, 7 oz, 8 lb, 9 kg, 10 L
+* All temperatures must be in both Fahrenheit and Celsius e.g. 350 °F (175 °C)
 * When ingredient amounts are standard units e.g. stick of butter, can of beans, etc. also include the relevant measurement e.g. "1 stick (1⁄2 c) unsalted butter"
-* Units and Measurements: Use the following standard abbreviations c, g, tbsp, tsp, L, ml, oz, lb, kg, pt, qt, gal, fl oz, in, cm, mm, m, ft, °F, °C. Do not use periods after abbreviations.
+* Use the following standard abbreviations ea, c, g, tbsp, tsp, L, ml, oz, lb, kg, pt, qt, gal, fl oz, in, cm, mm, m, ft, °F, °C. Do not use periods after abbreviations.
 * When an amount contains both weight and volume, list both with weight in parentheses _before_ the ingredient e.g. "1 c (120 g) flour" NOT "120 g (1 c) flour" or "1 c flour (120 g)"
 * List ingredients in the order they are used.
 * Remove any unnecessary qualifiers e.g. "fine-quality chocolate" should be "chocolate" and "farm fresh eggs" should be "eggs"
-* Rewrite the instructions to be concise and to the point. Do not include unnecessary words or phrases. Assume the reader is an experienced cook and omit anything that is obvious. THIS IS EXTREMELY IMPORTANT!!!
 * Remove any notes of when / where the recipe was first published or information about the publisher.
 * Remove any fluffy language, claims about how good the recipe is, personal anecdotes, etc.
+* Rewrite the instructions to be concise and to the point. Do not include unnecessary words or phrases. Assume the reader is an experienced cook and omit anything that is obvious. THIS IS EXTREMELY IMPORTANT!!!
 """
 
 
@@ -70,8 +69,12 @@ def rewrite_recipe(recipe_text, model, clean):
 
 
 def fetch_and_parse(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+        'Referer': 'https://www.google.com/'
+    }
     try:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, 'html.parser')
         return soup
@@ -116,10 +119,29 @@ def format_recipe(json_data):
     return formatted_recipe
 
 
+
+def extract_recipe_text(soup):
+    # Search through each element in the soup
+    for container in soup.find_all():
+        # Check if the container has descendants that contain 'ingredients' and 'instructions'
+        if container.find(string=lambda text: 'ingredients' in text.lower()) and container.find(string=lambda text: 'instructions' in text.lower()):
+            # Return the text from this container
+            return container.get_text(separator=' ', strip=True)
+
+
+def extract_recipe_content(soup):
+    recipe_json = extract_recipe_json(soup)
+    if recipe_json:
+        return format_recipe(recipe_json)
+    recipe_text = extract_recipe_text(soup)
+    if recipe_text:
+        return recipe_text
+    raise ValueError("No recipe content found.")
+
+
 def fetch_recipe_from_url(url):
     soup = fetch_and_parse(url)
-    recipe_json = extract_recipe_json(soup)
-    return format_recipe(recipe_json)
+    return extract_recipe_content(soup)
 
 
 def read_recipe_from_file(file_path):
@@ -149,46 +171,14 @@ def fix_fractions(text):
     return re.sub(r'(\d)/(\d)', r'\1⁄\2', text)
 
 
-def node_to_latex(node):
-    if node.tag == "p":
-        return node.children[0].content + "\\par"
-    elif node.tag == "h3":
-        return "\\subsection*{" + node.children[0].content + "}\n"
-    elif node.tag == "ol":
-        latex = "\\begin{enumerate}[leftmargin=*]\n"
-        for item in node.children:
-            latex += "    \\item " + escape_latex(item.children[0].children[0].content) + "\n"
-        latex += "\\end{enumerate}\n"
-        return latex
-    elif node.tag == "ul":
-        latex = "\\begin{itemize}[leftmargin=*]\n"
-        for item in node.children:
-            latex += "    \\item " + escape_latex(item.children[0].children[0].content) + "\n"
-        latex += "\\end{itemize}\n"
-        return latex
-    elif node.tag == "table":
-        latex = "\\begin{tabular}{@{}ll}\n"
-        for row in node.children[1]:
-            amount = escape_latex(row.children[0].children[0].content)
-            ingredient = escape_latex(row.children[1].children[0].content)
-            latex += fix_fractions(amount) + " & " + ingredient + " \\\\\n"
-        latex += "\\end{tabular}\n"
-        return latex
-    else:
-        raise ValueError(f"Unsupported node type: {node.tag}")
-
-
-def json_to_latex(json):
-    title = json.get('title', 'No Title')
-    description = json.get('description', None)
-    ingredients = json.get('ingredients', [])
-    instructions = json.get('instructions', [])
-    notes = json.get('notes', None)
-    source = json.get('source', None)
-
-    source_latex = ""
-    if source:
-        source_latex = "\\fancyfoot[C]{\\footnotesize " + escape_latex(source) + "}"
+def json_to_latex(json_text):
+    title = json_text.get('title', 'No Title')
+    description = json_text.get('description', None)
+    ingredients = json_text.get('ingredients', [])
+    instructions = json_text.get('instructions', [])
+    notes = json_text.get('notes', None)
+    source = json_text.get('source', None)
+    source_latex = "\\fancyfoot[C]{\\footnotesize " + escape_latex(source) + "}" if source else ""
 
     latex = [
         "\\documentclass[11pt]{article}",
@@ -213,29 +203,37 @@ def json_to_latex(json):
         "{\\huge \\bfseries \\headingfont " + escape_latex(title) + "}",
         "\\end{center}"
     ]
+
     if description:
         latex.append("\\vspace{1em}")
         latex.append(description)
+
     latex.append("\\vspace{1em}")
-    latex.append("\\columnratio{0.35}")
+    latex.append("\\columnratio{0.4}")
     latex.append("\\begin{paracol}{2}")
     latex.append("\\setlength{\\columnsep}{2em}")
     latex.append("\\sloppy")
     latex.append("\\section*{Ingredients}")
     latex.append("\\begin{itemize}[leftmargin=*]")
+
     for ingredient in ingredients:
         latex.append(f"\\item {ingredient}")
+
     latex.append("\\end{itemize}")
     latex.append("\\switchcolumn")
     latex.append("\\section*{Instructions}")
     latex.append("\\begin{enumerate}[leftmargin=*]")
+
     for instruction in instructions:
         latex.append(f"\\item {instruction}")
+
     latex.append("\\end{enumerate}")
     latex.append("\\end{paracol}")
+
     if notes:
         latex.append("\\section*{Notes}")
         latex.append(notes)
+
     latex.append("\\end{document}")
 
     return "\n".join(latex)
@@ -250,28 +248,39 @@ def recipe_to_markdown(recipe):
     source = recipe.get('source', None)
 
     markdown = f"# {title}\n\n"
+
     if description:
         markdown += f"{description}\n\n"
+
     markdown += "## Ingredients\n\n"
     for ingredient in ingredients:
         markdown += f"* {ingredient}\n"
+
     markdown += "\n## Instructions\n\n"
     for i, instruction in enumerate(instructions, 1):
         markdown += f"{i}. {instruction}\n"
+
     if notes:
         markdown += "\n## Notes\n\n"
         markdown += notes
+
     if source:
         markdown += f"\n\nSource: {source}"
+
     return markdown
 
 
 def write_output(recipe, output_file=None):
     if output_file:
+        title = slugify(recipe.get('title', 'Recipe'))
+
         if output_file == '$TITLE.pdf':
-            title = slugify(recipe.get('title', 'Recipe'))
             output_file = f"{title}.pdf"
+        elif output_file == '$TITLE.md':
+            output_file = f"{title}.md"
+
         extension = os.path.splitext(output_file)[1]
+
         if extension == '.pdf':
             latex = json_to_latex(recipe)
             with tempfile.TemporaryDirectory() as temp_dir:
@@ -290,23 +299,28 @@ def write_output(recipe, output_file=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Process and reformat a recipe from a URL or file.")
+    parser = argparse.ArgumentParser(description="Reformat and optionally rewrite a recipe from a URL or file.")
+
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("-u", "--url", type=str, help="URL of the recipe to process.")
     group.add_argument("-f", "--file", type=str, help="File containing the recipe to process.")
-    parser.add_argument("-o", "--output", type=str,
-                        help="Output file to write the processed recipe. If not provided, print to stdout.")
+
+    parser.add_argument("-o", "--output", type=str, help="Output file to write the processed recipe. If not provided, print to stdout.")
     parser.add_argument("-c", "--clean", action="store_true", help="Clean up the recipe")
-    parser.add_argument("-m", "--model", type=str, default="gpt-4-turbo",
-                        help="The model to use for rewriting the recipe.")
+    parser.add_argument("-m", "--model", type=str, default="gpt-4-turbo", help="OpenAI model to use for rewriting the recipe.")
+
     args = parser.parse_args()
+
     if args.url:
         recipe = fetch_recipe_from_url(args.url)
     else:
         recipe = read_recipe_from_file(args.file)
+
     processed_recipe = rewrite_recipe(recipe, args.model, args.clean)
+
     if args.url:
         processed_recipe['source'] = args.url
+
     write_output(processed_recipe, args.output)
 
 
