@@ -10,11 +10,41 @@ Set the `OPENAI_API_KEY` environment variable before running the program.
 
 Run the program by specifying either a URL or a file path for the recipe, and optionally define an output path:
 
-- `-u, --url URL`: Specify the URL of the recipe to fetch and process.
-- `-f, --file FILE`: Specify the path to a local file containing the recipe.
-- `-o, --output OUTPUT`: Define the output file path for the formatted recipe (supports `.md` and `.pdf`). If the filename is `$TITLE.pdf` or `$TITLE.md`, the filename will be automatically generated based on the recipe title. If not provided, the recipe is formatted as markdown and printed to stdout.
-- `-m, --model MODEL`: Specify the OpenAI model to use for recipe formatting (default: `gpt-4-turbo`).
-- `-c, --clean`: Rewrite instructions to be more concise, clean up ingredients, and remove unnecessary information (default: `false`).
+```commandline
+rf { -u URL | -f FILE } [ -o OUTPUT ] [ -m MODEL ] [ -c ] [ -v ]
+```
+
+### Arguments
+
+#### `-u, --url URL`
+
+Specify the URL of the recipe to fetch and process.
+
+#### `-f, --file FILE`
+
+Specify the path to a local file containing the recipe.
+
+#### `-o, --output OUTPUT`
+
+Define the output file format and path for the formatted recipe.
+
+Supported formats: `.json`, `.md`, `.tex`, and `.pdf`.
+
+If the file path contains the special token `{title}`, it will be replaced with the slugified recipe name.
+
+If no output path is specified, the recipe will be printed to stdout in JSON format.
+
+#### `-m, --model MODEL`
+
+Specify the OpenAI model to use for recipe formatting. Defaults to `gpt-4-turbo`.
+
+#### `-c, --clean`
+
+Rewrite instructions to be more concise, clean up ingredients, and remove unnecessary information. Defaults to `false`.
+
+#### `-v, --verbose`
+
+Enable verbose mode to display additional information during processing. Defaults to `false`.
 
 ## Examples
 
@@ -29,9 +59,9 @@ rf -u https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-144
 rf -c -u https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478 -o flourless-chocolate-cake-cleaned.pdf
 ```
 
-|              ![](examples/flourless-chocolate-cake.jpg)               |                  ![](examples/flourless-chocolate-cake-cleaned.jpg)                   |
-|:---------------------------------------------------------------------:|:-------------------------------------------------------------------------------------:|
-| [flourless-chocolate-cake.pdf](examples/flourless-chocolate-cake.pdf) | [flourless-chocolate-cake-cleaned.pdf](examples/flourless-chocolate-cake-cleaned.pdf) |
+|            ![](examples/example.jpg)            |                  ![](examples/example-cleaned.jpg)                   |
+|:----------------------------------------------------:|:--------------------------------------------------------------------:|
+| [example.pdf](examples/flourless-chocolate-cake.pdf) | [flourless-chocolate-cake-cleaned.pdf](examples/example-cleaned.pdf) |
 
 ### Markdown (Normal)
 
@@ -98,7 +128,7 @@ Source: https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing/
 
 ### Python
 
-Requires a Python compatible with Nuitka (tested with Python 3.11).
+Python 3.8+ should be fine. Creating a self-contained binary requires a Python compatible with Nuitka (tested with Python 3.11).
 
 ```
 python3 -m venv .venv
