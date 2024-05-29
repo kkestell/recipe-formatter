@@ -55,8 +55,9 @@ export OPENAI_API_KEY='your-api-key'
 ### PDF
 
 ```
-rf -u https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478 -o flourless-chocolate-cake.pdf
-rf -c -u https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478 -o flourless-chocolate-cake-cleaned.pdf
+URL='https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478'
+rf -u $URL -o example.pdf
+rf -u $URL -o example-cleaned.pdf -c
 ```
 
 |  ![Example](examples/example.jpg)   | ![Example (Cleaned)](examples/example-cleaned.jpg)  |
