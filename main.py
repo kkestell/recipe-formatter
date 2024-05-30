@@ -26,7 +26,8 @@ class Config:
     max_attempts: int
 
 
-system_prompt = """Please return the recipe in JSON format with the following structure:
+system_prompt = """
+Please return the recipe in JSON format with the following structure:
 ```json
 {
   "title": "Recipe Title",
@@ -43,10 +44,12 @@ system_prompt = """Please return the recipe in JSON format with the following st
   ],
   "notes": "Optional notes."
 }
-```"""
+```
+"""
 
 
-clean_prompt = """Additionally, please rewrite the recipe to strictly conform to the following guidelines. None of these are optional:
+clean_prompt = """
+Additionally, please rewrite the recipe to strictly conform to the following guidelines. None of these are optional:
 * Fractions must use U+2044 FRACTION SLASH ⁄ e.g. 1⁄2
 * Measurements for cake and pie pans, etc. expressed in inches must use U+0022 QUOTATION MARK " for inches e.g. 9" and rectangular measurements must use U+00D7 MULTIPLICATION SIGN × e.g. 9×13"
 * Temperatures must use U+00B0 DEGREE SIGN ° e.g. 350 °F. All temperatures must be in both Fahrenheit and Celsius e.g. 350 °F (175 °C)
@@ -60,7 +63,9 @@ clean_prompt = """Additionally, please rewrite the recipe to strictly conform to
 * Rewrite the instructions to be concise and to the point. Do not include unnecessary words or phrases. Assume the reader is an experienced cook and omit anything that is obvious. THIS IS EXTREMELY IMPORTANT!!!
 * Do not under any circumstances omit any ingredients. Please double check that all ingredients mentioned in the instructions are also listed in the ingredients section, and vice versa.
 * Never add a description or notes that are not present in the original recipe. If the original recipe does not have a description or notes, do not add them. You should have a bias _against_ descriptions and notes.
-* If the description or notes are merely talking about how good the recipe is, how easy it is to make, how healthy it is etc. they should be removed."""
+* If the description or notes are merely talking about how good the recipe is, how easy it is to make, how healthy it is etc. they should be removed.
+* Rewrite the title to be short and simple. E.g. "To Die For Blueberry Muffins" should be "Blueberry Muffins"
+"""
 
 def rewrite_recipe(recipe_text, config):
     prompt = system_prompt
@@ -339,7 +344,7 @@ def main():
     parser.add_argument("file_or_url", type=str, help="URL or file path to the recipe to process.")
 
     parser.add_argument("-o", "--output", type=str, help="Output file to write the processed recipe. If not provided, print to stdout.")
-    parser.add_argument("-f", "--format", type=str, default="md", help="Output format (md, tex, pdf, json)")
+    parser.add_argument("-f", "--format", type=str, help="Output format (md, tex, pdf, json)")
 
     parser.add_argument("-c", "--clean", action="store_true", help="Clean up the recipe")
 
@@ -352,7 +357,13 @@ def main():
 
     args = parser.parse_args()
 
-    config = Config(model=args.model, clean=args.clean, verbose=args.verbose, output_format=args.format,
+    fmt = "md"
+    if not args.format and args.output:
+        extension = os.path.splitext(args.output)[1]
+        if extension in ['.md', '.tex', '.pdf', '.json']:
+            fmt = extension[1:]
+
+    config = Config(model=args.model, clean=args.clean, verbose=args.verbose, output_format=fmt,
                     output_path=args.output, timeout=30, max_attempts=3)
 
     is_url = args.file_or_url.startswith('http')
