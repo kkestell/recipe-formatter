@@ -14,7 +14,7 @@ rf [OPTIONS] URL_OR_FILE
 
 #### `-o, --output OUTPUT`
 
-Define the output file format and path for the formatted recipe.
+Define the output file path for the formatted recipe.
 
 If the file path contains the special token `{title}`, it will be replaced with the slugified recipe name.
 
@@ -22,7 +22,7 @@ If no output path is specified, the recipe will be printed to stdout.
 
 #### `-f, --format FORMAT`
 
-Supported formats: `.json`, `.md`, `.tex`, and `.pdf`.
+Supported formats: `json`, `md`, `tex`, and `pdf`.
 
 If the format is not specified, the recipe will be formatted as markdown.
 
