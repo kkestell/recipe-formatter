@@ -2,37 +2,29 @@
 
 ## Overview
 
-Uses the OpenAI API to reformat a recipe from a URL or local file and converts it into markdown or PDF.
+Uses the OpenAI API to reformat a recipe from a URL or local file and converts it into JSON, markdown, LaTeX, or PDF format.
 
 ## Usage
 
-Set the `OPENAI_API_KEY` environment variable before running the program.
-
-Run the program by specifying either a URL or a file path for the recipe, and optionally define an output path:
-
-```commandline
-rf { -u URL | -f FILE } [ -o OUTPUT ] [ -m MODEL ] [ -c ] [ -v ]
+```
+rf [OPTIONS] URL_OR_FILE
 ```
 
-### Arguments
-
-#### `-u, --url URL`
-
-Specify the URL of the recipe to fetch and process.
-
-#### `-f, --file FILE`
-
-Specify the path to a local file containing the recipe.
+### Options
 
 #### `-o, --output OUTPUT`
 
 Define the output file format and path for the formatted recipe.
 
-Supported formats: `.json`, `.md`, `.tex`, and `.pdf`.
-
 If the file path contains the special token `{title}`, it will be replaced with the slugified recipe name.
 
-If no output path is specified, the recipe will be printed to stdout in JSON format.
+If no output path is specified, the recipe will be printed to stdout.
+
+#### `-f, --format FORMAT`
+
+Supported formats: `.json`, `.md`, `.tex`, and `.pdf`.
+
+If the format is not specified, the recipe will be formatted as markdown.
 
 #### `-m, --model MODEL`
 
@@ -52,10 +44,9 @@ Enable verbose mode to display additional information during processing. Default
 
 ```
 OPENAI_API_KEY='your-api-key'
-URL='https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478'
 
-rf -u $URL -o example.pdf
-rf -u $URL -o example-cleaned.pdf -c
+rf -f pdf -o example.pdf https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478
+rf -f pdf -o example-cleaned.pdf -c https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478
 ```
 
 |  ![Example](examples/example.jpg)   | ![Example (Cleaned)](examples/example-cleaned.jpg)  |
@@ -65,8 +56,8 @@ rf -u $URL -o example-cleaned.pdf -c
 ### Markdown
 
 ```
-rf -u https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing -o example.md
-rf -u https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing -o example-cleaned.md -c
+rf -f md -o example.md https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing
+rf -f md -o example-cleaned.md -c https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing
 ```
 
 #### Normal
@@ -120,6 +111,70 @@ For a coleslaw recipe that's creamy and delicious, toss this easy-to-make, 5-min
 2. Transfer to an airtight container for storage.
 
 Source: https://www.allrecipes.com/recipe/240784/easy-coleslaw-dressing/
+```
+
+### JSON
+
+```
+rf -f json -o example.json https://www.allrecipes.com/recipe/16760/best-fried-green-tomatoes/
+rf -f json -o example-cleaned.json -c https://www.allrecipes.com/recipe/16760/best-fried-green-tomatoes/
+```
+
+#### Normal
+
+```json
+{
+    "title": "Best Fried Green Tomatoes",
+    "description": "These fried green tomatoes are perfectly crispy outside, juicy inside, and a quick and easy way to use up green tomatoes for a wonderful late summer treat.",
+    "ingredients": [
+        "4 large green tomatoes",
+        "2 eggs",
+        "0.5 cup milk",
+        "1 cup all-purpose flour",
+        "0.5 cup cornmeal",
+        "0.5 cup bread crumbs",
+        "2 teaspoons coarse kosher salt",
+        "0.25 teaspoon ground black pepper",
+        "1 quart vegetable oil for frying"
+    ],
+    "instructions": [
+        "Gather all ingredients.",
+        "Slice tomatoes 1/2 inch thick. Discard the ends.",
+        "Whisk eggs and milk together in a medium-sized bowl. Scoop flour onto a plate. Mix cornmeal, bread crumbs, salt, and pepper on another plate. Dip tomatoes into flour to coat. Then dip tomatoes into milk and egg mixture; dredge in breadcrumbs to completely coat.",
+        "Heat oil in a large deep skillet to 375 degrees F (190 degrees C). Place tomatoes in hot oil in batches of 4 or 5, to prevent them from touching; fry until crisp and golden brown on one side, then flip and fry on other side.",
+        "Transfer fried tomatoes to a paper towel-lined plate to drain. Repeat with remaining tomatoes.",
+        "Serve hot and enjoy!"
+    ],
+    "notes": "For extra flavor, you can add a pinch of cayenne pepper to the breadcrumb mixture.",
+    "source": "https://www.allrecipes.com/recipe/16760/best-fried-green-tomatoes/"
+}
+```
+
+#### Cleaned
+
+```json
+{
+    "title": "Fried Green Tomatoes",
+    "ingredients": [
+        "4 large green tomatoes",
+        "2 ea eggs",
+        "1⁄2 c milk",
+        "1 c all-purpose flour",
+        "1⁄2 c cornmeal",
+        "1⁄2 c bread crumbs",
+        "2 tsp coarse kosher salt",
+        "1⁄4 tsp ground black pepper",
+        "1 qt vegetable oil for frying"
+    ],
+    "instructions": [
+        "Slice tomatoes 1⁄2 in thick. Discard the ends.",
+        "Whisk eggs and milk together in a medium-sized bowl. Place flour on a plate. Combine cornmeal, bread crumbs, salt, and pepper on another plate.",
+        "Dip tomatoes into flour to coat, then into the egg and milk mixture, and finally dredge in the breadcrumb mixture to completely coat.",
+        "Heat oil in a large deep skillet to 375 °F (190 °C). Fry tomatoes in batches of 4 or 5, ensuring they do not touch, until crisp and golden brown on both sides.",
+        "Transfer fried tomatoes to a paper towel-lined plate to drain. Repeat with remaining tomatoes."
+    ],
+    "source": "https://www.allrecipes.com/recipe/16760/best-fried-green-tomatoes/"
+}
 ```
 
 ## Dependencies
