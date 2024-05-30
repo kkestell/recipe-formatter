@@ -357,7 +357,7 @@ def main():
 
     args = parser.parse_args()
 
-    fmt = "md"
+    fmt = "json"
     if not args.format and args.output:
         extension = os.path.splitext(args.output)[1]
         if extension in ['.md', '.tex', '.pdf', '.json']:
