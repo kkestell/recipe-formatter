@@ -24,7 +24,7 @@ If no output path is specified, the recipe will be printed to stdout.
 
 Supported formats: `json`, `md`, `tex`, and `pdf`.
 
-If no format is specified, the output format will be inferred from the output file extension. If no output file is specified, or the specified output file has an extension that is not recognized, the recipe will be formatted as JSON and printed to stdout.
+If no format is specified, the output format will be inferred from the output file extension. If no output file is specified, or the specified output file has an extension that is not recognized, the recipe will be formatted as JSON.
 
 #### `-m, --model MODEL`
 
