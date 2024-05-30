@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 
@@ -19,6 +20,8 @@ class Config:
     model: str
     clean: bool
     verbose: bool
+    output_format: str
+    output_path: str | None
     timeout: int
     max_attempts: int
 
@@ -55,8 +58,9 @@ clean_prompt = """Additionally, please rewrite the recipe to strictly conform to
 * Remove any notes of when / where the recipe was first published or information about the publisher.
 * Remove any fluffy language, claims about how good the recipe is, personal anecdotes, etc.
 * Rewrite the instructions to be concise and to the point. Do not include unnecessary words or phrases. Assume the reader is an experienced cook and omit anything that is obvious. THIS IS EXTREMELY IMPORTANT!!!
-* Do not under any circumstances omit any ingredients. Please double check that all ingredients mentioned in the instructions are also listed in the ingredients section, and vice versa."""
-
+* Do not under any circumstances omit any ingredients. Please double check that all ingredients mentioned in the instructions are also listed in the ingredients section, and vice versa.
+* Never add a description or notes that are not present in the original recipe. If the original recipe does not have a description or notes, do not add them. You should have a bias _against_ descriptions and notes.
+* If the description or notes are merely talking about how good the recipe is, how easy it is to make, how healthy it is etc. they should be removed."""
 
 def rewrite_recipe(recipe_text, config):
     prompt = system_prompt
@@ -293,51 +297,49 @@ def recipe_to_markdown(recipe):
     return markdown
 
 
-def write_output(recipe, config, output_file=None):
-    if output_file:
-        title = slugify(recipe.get('title', 'Recipe'))
-        output_file = output_file.replace('{title}', title)
-        extension = os.path.splitext(output_file)[1]
-
-        if extension == '.pdf' or extension == '.tex':
-            latex = json_to_latex(recipe)
-            if extension == '.tex':
-                with open(output_file, 'w') as f:
-                    f.write(latex)
-            else:
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    temp_file = os.path.join(temp_dir, 'recipe.tex')
-                    with open(temp_file, 'w') as f:
-                        f.write(latex)
-                    if config.verbose:
-                        subprocess.run(['xelatex', temp_file], cwd=temp_dir, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    else:
-                        subprocess.run(['xelatex', temp_file], cwd=temp_dir)
-                    pdf_file = os.path.join(temp_dir, 'recipe.pdf')
-                    shutil.move(pdf_file, output_file)
-        elif extension == '.md':
-            with open(output_file, 'w') as f:
-                markdown = recipe_to_markdown(recipe)
-                f.write(markdown)
-        elif extension == '.json':
-            with open(output_file, 'w') as f:
-                json.dump(recipe, f, ensure_ascii=False, indent=4)
-        else:
-            with open(output_file, 'w') as f:
-                markdown = recipe_to_markdown(recipe)
-                f.write(markdown)
+def write_output(recipe, config):
+    output, mode = None, 'w'
+    if config.output_format == 'tex':
+        output = json_to_latex(recipe)
+    elif config.output_format == 'json':
+        output = json.dumps(recipe, ensure_ascii=False, indent=4)
+    elif config.output_format == 'pdf':
+        output, mode = generate_pdf(recipe, config.verbose), 'wb'
     else:
-        print(recipe)
+        output = recipe_to_markdown(recipe)
+
+    if config.output_path:
+        title = slugify(recipe.get('title', 'Recipe'))
+        output_file = config.output_path.replace('{title}', title)
+        with open(output_file, mode) as f:
+            f.write(output)
+    else:
+        if mode == 'wb':
+            sys.stdout.buffer.write(output)
+        else:
+            print(output)
+
+
+def generate_pdf(recipe, verbose):
+    latex_content = json_to_latex(recipe)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_file = os.path.join(temp_dir, 'recipe.tex')
+        with open(temp_file, 'w') as f:
+            f.write(latex_content)
+        subprocess_args = ['xelatex', temp_file, '-output-directory', temp_dir]
+        subprocess.run(subprocess_args, cwd=temp_dir, stdout=subprocess.DEVNULL if not verbose else None)
+        pdf_file = os.path.join(temp_dir, 'recipe.pdf')
+        with open(pdf_file, 'rb') as f:
+            return f.read()
 
 
 def main():
     parser = argparse.ArgumentParser(description="Reformat and optionally rewrite a recipe from a URL or file.")
 
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-u", "--url", type=str, help="URL of the recipe to process.")
-    group.add_argument("-f", "--file", type=str, help="File containing the recipe to process.")
+    parser.add_argument("file_or_url", type=str, help="URL or file path to the recipe to process.")
 
     parser.add_argument("-o", "--output", type=str, help="Output file to write the processed recipe. If not provided, print to stdout.")
+    parser.add_argument("-f", "--format", type=str, default="md", help="Output format (md, tex, pdf, json)")
 
     parser.add_argument("-c", "--clean", action="store_true", help="Clean up the recipe")
 
@@ -345,24 +347,27 @@ def main():
 
     parser.add_argument("-m", "--model", type=str, default="gpt-4-turbo", help="OpenAI model to use for rewriting the recipe.")
     # TODO
-    parser.add_argument("-p", "--prompt", type=str, help="Prompt to use for cleaning up the recipe (implies --clean)")
-    parser.add_argument("-b", "--built-in-prompt", action="store_true", help="Display the built-in prompt")
+    # parser.add_argument("-p", "--prompt", type=str, help="Prompt to use for cleaning up the recipe (implies --clean)")
+    # parser.add_argument("-b", "--built-in-prompt", action="store_true", help="Display the built-in prompt")
 
     args = parser.parse_args()
 
-    config = Config(model=args.model, clean=args.clean, verbose=args.verbose, timeout=30, max_attempts=3)
+    config = Config(model=args.model, clean=args.clean, verbose=args.verbose, output_format=args.format,
+                    output_path=args.output, timeout=30, max_attempts=3)
 
-    if args.url:
-        recipe = fetch_recipe_from_url(args.url)
+    is_url = args.file_or_url.startswith('http')
+
+    if is_url:
+        recipe = fetch_recipe_from_url(args.file_or_url)
     else:
-        recipe = read_recipe_from_file(args.file)
+        recipe = read_recipe_from_file(args.file_or_url)
 
     processed_recipe = rewrite_recipe(recipe, config)
 
-    if args.url:
-        processed_recipe['source'] = args.url
+    if is_url:
+        processed_recipe['source'] = args.file_or_url
 
-    write_output(processed_recipe, config, args.output)
+    write_output(processed_recipe, config)
 
 
 if __name__ == "__main__":
