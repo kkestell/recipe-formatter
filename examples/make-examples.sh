@@ -1,24 +1,26 @@
 #!/usr/bin/env bash
 set -x
 
-urls=(
-  'https://www.bonappetit.com/recipe/bas-best-chocolate-chip-cookies'
-  'https://smittenkitchen.com/2022/05/double-chocolate-chip-muffins/'
-  'https://www.foodandwine.com/recipes/jamaican-jerk-chicken'
-  'https://www.allrecipes.com/recipe/7399/tres-leches-milk-cake/'
-  'https://www.epicurious.com/recipes/food/views/flourless-chocolate-cake-14478'
-)
-
 pushd "$(dirname "$0")" || exit 1
 
-for i in "${!urls[@]}"; do
-    url="${urls[i]}"
+URL="https://www.allrecipes.com/recipe/17644/german-chocolate-cake-iii/"
 
-    python ../main.py -m gpt-4o -o "example$(($i+1)).pdf" "$url" || exit 1
-    convert -density 100 -quality 100 -flatten "example$(($i+1)).pdf" "example$(($i+1)).jpg"
+python ../main.py -o example1.pdf -v $URL || exit 1
+gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dJPEGQ=100 -r75 -sOutputFile=example1-%d.jpg example1.pdf
 
-    python ../main.py -m gpt-4o -o "example$(($i+1))-cleaned.pdf" -c "$url" || exit 1
-    convert -density 100 -quality 100 -flatten "example$(($i+1))-cleaned.pdf" "example$(($i+1))-cleaned.jpg"
-done
+python ../main.py -o example2.pdf -v -n $URL || exit 1
+gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dJPEGQ=100 -r75 -sOutputFile=example2-%d.jpg example2.pdf
+
+python ../main.py -o example3.pdf -v -n -g $URL || exit 1
+gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dJPEGQ=100 -r75 -sOutputFile=example3-%d.jpg example3.pdf
+
+python ../main.py -o example4.pdf -v -n -g -t $URL || exit 1
+gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dJPEGQ=100 -r75 -sOutputFile=example4-%d.jpg example4.pdf
+
+python ../main.py -o example5.pdf -v -n -g -t -r "sub goat's milk" $URL || exit 1
+gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dJPEGQ=100 -r75 -sOutputFile=example5-%d.jpg example5.pdf
+
+python ../main.py -o example6.pdf -v -n -g -t -r "sub goat's milk" -s 2 $URL || exit 1
+gs -dNOPAUSE -dBATCH -sDEVICE=jpeg -dTextAlphaBits=4 -dGraphicsAlphaBits=4 -dJPEGQ=100 -r75 -sOutputFile=example6-%d.jpg example6.pdf
 
 popd || exit 1
