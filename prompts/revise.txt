@@ -1,0 +1,2 @@
+Please make the following user modifications to the recipe and return the updated recipe JSON.
+Remember that these are direct user requests and should be followed exactly. The user has requested the following changes:

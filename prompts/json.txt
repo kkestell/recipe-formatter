@@ -1,0 +1,32 @@
+Convert the recipe to JSON format.
+Unless the recipe is already grouped, please put all of the ingredients in a single ingredient group and all of the instructions in a single instruction group, both with empty titles.
+If the recipe is already grouped, please preserve the existing groupings.
+
+Here is an example of the JSON format:
+```json
+{
+  "title": "Recipe Title",
+  "description": "Optional introductory text.",
+  "ingredient_groups": [
+    {
+      "title": "...",
+      "ingredients": [
+        "Ingredient 1",
+        "Ingredient 2",
+        "Ingredient 3"
+      ]
+    }
+  ],
+  "instruction_groups": [
+    {
+      "title": "...",
+      "instructions": [
+        "Step 1",
+        "Step 2",
+        "Step 3"
+      ]
+    }
+  ],
+  "notes": "Optional notes."
+}
+```

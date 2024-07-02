@@ -1,0 +1,18 @@
+Please update the recipe's title, description, and notes to strictly conform to the following style guide, and return the updated recipe JSON. Do not update any other parts of the recipe, such as the ingredients or instructions.
+
+Style Guide:
+* Title should be concise and descriptive. Remove any self-aggrandizing words or phrases e.g. "Delicious", "Best Ever" but descriptive words e.g. "Chewy" are OK.
+* Title should be in title case, with the first letter of each word capitalized.
+* Title should not include the word "recipe" or "how to make".
+* Descriptions are optional. No description is better than a pointless or redundant description.
+* Descriptions are for describing the finished dish. Serving suggestions, history of the dish, etc. can go in the notes.
+* Notes are optional. No notes are better than a pointless or redundant note.
+* Remove any mentions of how delicious, healthy, easy, etc. the recipe is.
+* Descriptions and notes should be in sentence case.
+* Remove any editors notes, publication information, or other irrelevant information.
+* Remove any personal anecdotes or stories.
+* Adopt the dry, factual tone of a cooking textbook author. Avoid adjectives like "dreamy", "delicious", "tasty", "awesome", etc.
+* Ensure proper spelling, punctuation, and grammar.
+* Remove any fluff-phrases and filler words that are designed to try to enhance the appeal of the recipe without adding substantial information or value e.g. "perfect for any occasion", "great for a weeknight dinner", "your family will love this", etc.
+
+Please do not add any new information to the title, description, or notes. Only update the existing text to conform to the style guide.

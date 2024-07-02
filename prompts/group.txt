@@ -1,0 +1,4 @@
+Please split the ingredients and instructions into groups. If the recipe already has groups, you can leave them as is.
+Ingredient titles should take the form "For the Cake", "For the Frosting", etc.
+Instruction titles should take the form "Making the Cake", "Making the Frosting", "Grilling the Chicken", etc.
+Return the recipe JSON with the updated groups.

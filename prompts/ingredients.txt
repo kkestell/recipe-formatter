@@ -1,0 +1,86 @@
+Update the ingredients in the recipe to strictly conform to the following style guide, and return the updated JSON.
+
+### Detailed Ingredient List Style Guide
+
+1. **Naming**: Use clear, standard names for all ingredients, specifying types or varieties when relevant.
+   - **Examples**:
+     - "granulated sugar" not just "sugar"
+     - "kosher salt" not just "salt"
+     - "Granny Smith apple"
+     - "extra virgin olive oil"
+     - "whole wheat flour"
+
+2. **Order**: Ingredients should be listed in the order they are used in the recipe.
+   - **Examples**:
+     - Begin with "2 eggs," followed by "1 c sugar" if used sequentially.
+     - "1 tsp vanilla extract" after "2 c flour" if mixing follows.
+     - List base ingredients before toppings in recipes like pizza.
+     - Spices listed after main ingredients in a curry.
+     - Salad dressings ingredients listed after salad components.
+
+3. **Measurements**: Use the measurement system most familiar to your intended audience, with one alternative for precision or clarity.
+   - **Examples**:
+     - "1 c (240 ml) milk"
+     - "3⁄4 c (100 g) flour"
+     - "2 tbsp (30 ml) olive oil"
+     - "4 tsp (20 ml) maple syrup"
+     - "5 lb (2.3 kg) potatoes"
+
+4. **Formatting**: Use numerals for quantities, with standard abbreviations for units.
+   - **Examples**:
+     - "1 tbsp olive oil"
+     - "3 tsp yeast"
+     - "2 lb chicken"
+     - "5 oz (140 g) cheddar cheese"
+     - "100 g (3.5 oz) dark chocolate"
+
+5. **Case Usage**: Keep ingredient names in lowercase, except for proper nouns.
+   - **Examples**:
+     - "cheddar cheese"
+     - "Greek yogurt"
+     - "Japanese soy sauce"
+     - "Himalayan pink salt"
+     - "San Marzano tomatoes"
+
+6. **Descriptors and Preparation Details**: Attach relevant preparation details directly with the ingredient.
+   - **Examples**:
+     - "1 onion, finely chopped"
+     - "2 cloves garlic, minced"
+     - "3 carrots, peeled and diced"
+     - "200 g spinach, washed and drained"
+     - "1 apple, cored and sliced"
+
+7. **Packaged Ingredients**: Clearly indicate the package size or weight.
+   - **Examples**:
+     - "1 stick (1⁄2 c) unsalted butter"
+     - "1 can (15 oz) black beans"
+     - "1 package (10 oz) frozen peas"
+     - "1 jar (500 ml) marinara sauce"
+     - "1 box (1 lb) pasta"
+     - "1 bottle (750 ml) red wine"
+
+8. **Variable Ingredients**: Specify the precise measurement first, followed by the approximate quantity in physical units, particularly for variable-size ingredients.
+    - **Examples**:
+      - "2 c (1 large) chopped yellow onion"
+      - "3 tbsp (1 lemon) lemon juice"
+      - "1 c (about 8 oz) chopped tomatoes"
+      - "4 c (about 1 lb) sliced mushrooms"
+      - "1 pt (about 10-12) strawberries, hulled and halved"
+
+9. **Cookware and Temperatures**: Specify cookware sizes using quotation marks for inches and the multiplication sign for rectangular measurements; provide temperatures in both Fahrenheit and Celsius using the degree sign.
+    - **Examples**:
+      - "Preheat oven to 350 °F (175 °C)"
+      - "Use a 9\" round cake pan"
+      - "Prepare a 9×13\" baking dish"
+
+Please return your output in this format:
+
+```json
+{
+"ingredient_groups": [
+    {
+        "title": "...",
+        "ingredients": [...]
+    },
+]
+```

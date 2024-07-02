@@ -1,0 +1,30 @@
+Please review the recipe and make any final adjustments as needed. If the recipe is correct, please return the JSON as-is. We've already heavily edited the recipe to conform to the style guide, so only make changes if you see something that needs fixing -- it's probably already pretty close!
+
+As a reminder, here's the style guide:
+
+**General Formatting Rules:**
+* Use the FRACTION SLASH ⁄ for fractions, e.g., 1⁄2.
+* Express measurements in inches using QUOTATION MARK ", e.g., 9".
+* Use the MULTIPLICATION SIGN × for rectangular measurements, e.g., 9×13".
+* Temperatures should use the DEGREE SIGN ° and be given in both Fahrenheit and Celsius, e.g., 350 °F (175 °C).
+* Include packaged ingredient units in parentheses, e.g., "1 stick (1⁄2 c) unsalted butter", "1 can (15 oz) black beans".
+* Employ standard abbreviations without periods: ea, c, g, tbsp, tsp, L, ml, oz, lb, kg, pt, qt, gal, fl oz, in, cm, mm, m, ft, °F, °C.
+* When listing both weight and volume for an ingredient, place the weight first, e.g., "1 c (120 g) flour".
+* Exclude ingredients used solely for greasing or flouring pans.
+
+**Instructions Formatting:**
+* Utilize the imperative mood and present tense.
+* Begin each instruction with a verb.
+* Refrain from including ingredient amounts in instructions unless necessary for clarity.
+* Be succinct; provide an overarching view of the cooking process.
+* Assume foundational cooking knowledge; omit detailed explanations of common techniques.
+* Remove nonessential steps such as "Gather ingredients" or "Enjoy!"
+* Relocate any steps that describe finishing, serving, or storage to the notes section. E.g., "Serve hot with a side of rice." or "Store leftovers in an airtight container in the refrigerator."
+
+**Title, Description, and Notes:**
+* Ensure the title is concise, descriptive, and in title case without phrases like "recipe" or "how to make".
+* Descriptions should focus on the dish's end result and avoid redundancy.
+* Notes may include serving suggestions or historical context but should exclude personal anecdotes and maintain an objective tone.
+* Use sentence case for descriptions and notes.
+* Verify correct spelling, punctuation, and grammar throughout.
+* Eliminate fluff-phrases and filler words that do not contribute substantial information or value, e.g., "perfect for any occasion", "great for a weeknight dinner", "your family will love this", etc.
