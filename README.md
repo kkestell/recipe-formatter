@@ -65,17 +65,9 @@ OPENAI_API_KEY='your-api-key'
 URL='https://www.allrecipes.com/recipe/7399/tres-leches-milk-cake/'
 ```
 
-| ![Example 1](examples/example1-1.jpg) |
-|:-------------------------------------:|
-|       `rf -o example1.pdf $URL`       |
-
-| ![Example 2](examples/example2-1.jpg) |
-|:-------------------------------------:|
-|     `rf -o example2.pdf -n $URL`      |
-
-| ![Example 3](examples/example3-1.jpg) |
-|:-------------------------------------:|
-|    `rf -o example3.pdf -n -g $URL`    |
+| ![Example 1](examples/example1-1.jpg) | ![Example 2](examples/example2-1.jpg) | ![Example 3](examples/example3-1.jpg) |
+|:-------------------------------------:|:-------------------------------------:|:-------------------------------------:|
+|       `rf -o example1.pdf $URL`       |     `rf -o example2.pdf -n $URL`      |    `rf -o example3.pdf -n -g $URL`    |
 
 ## Dependencies
 
