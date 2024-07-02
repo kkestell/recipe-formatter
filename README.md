@@ -2,12 +2,12 @@
 
 ## Overview
 
-Uses the OpenAI API to reformat a recipe from a URL or local file and converts it into JSON, markdown, LaTeX, or PDF format.
+Uses the OpenAI API to reformat a recipe from a URL convert it into JSON, markdown, LaTeX, or PDF.
 
 ## Usage
 
 ```
-rf [OPTIONS] URL_OR_FILE
+rf [OPTIONS] URL
 ```
 
 ### Options
@@ -20,6 +20,10 @@ If the file path contains the special token `{title}`, it will be replaced with 
 
 If no output path is specified, the recipe will be printed to stdout.
 
+#### `-n, --normalize`
+
+Normalize the recipe by using standard unit abbreviations and formatting. This is a boolean flag.
+
 #### `-f, --format FORMAT`
 
 Supported formats: `json`, `md`, `tex`, and `pdf`.
@@ -28,11 +32,23 @@ If no format is specified, the output format will be inferred from the output fi
 
 #### `-m, --model MODEL`
 
-Specify the OpenAI model to use for recipe formatting. Defaults to `gpt-4-turbo`.
+Specify the OpenAI model to use for recipe formatting. Defaults to `gpt-4o`.
 
-#### `-c, --clean`
+#### `-t, --tips`
 
-Rewrite instructions to be more concise, clean up ingredients, and remove unnecessary information. Defaults to `false`.
+Include tips from reviews in the output. This is a boolean flag.
+
+#### `-g, --group`
+
+Add groups to ingredients and instructions in the output. This is a boolean flag.
+
+#### `-s, --scale SCALE`
+
+Scale the recipe by the given factor. The default scaling factor is `1.0`.
+
+#### `-r, --revise REVISIONS`
+
+Specify revisions to make to the recipe. This option allows for custom textual modifications.
 
 #### `-v, --verbose`
 
@@ -46,30 +62,20 @@ See the [examples](examples) directory for more examples.
 
 ```
 OPENAI_API_KEY='your-api-key'
-
-rf -f pdf -o example.pdf https://www.allrecipes.com/recipe/7399/tres-leches-milk-cake/
-rf -f pdf -o example-cleaned.pdf -c https://www.allrecipes.com/recipe/7399/tres-leches-milk-cake/
+URL='https://www.allrecipes.com/recipe/7399/tres-leches-milk-cake/'
 ```
 
-|  ![Example 1](examples/example1.jpg)   | ![Example 1 (Cleaned)](examples/example1-cleaned.jpg)  |
-|:------------------------------------:|:----------------------------------------------------:|
-| [example1.pdf](examples/example1.pdf) | [example1-cleaned.pdf](examples/example1-cleaned.pdf) |
+| ![Example 1](examples/example1-1.jpg) |
+|:-------------------------------------:|
+|       `rf -o example1.pdf $URL`       |
 
-|  ![Example 2](examples/example2.jpg)   | ![Example 2 (Cleaned)](examples/example2-cleaned.jpg)  |
-|:------------------------------------:|:----------------------------------------------------:|
-| [example2.pdf](examples/example2.pdf) | [example2-cleaned.pdf](examples/example2-cleaned.pdf) |
+| ![Example 2](examples/example2-1.jpg) |
+|:-------------------------------------:|
+|     `rf -o example2.pdf -n $URL`      |
 
-|  ![Example 3](examples/example3.jpg)   | ![Example 3 (Cleaned)](examples/example3-cleaned.jpg)  |
-|:------------------------------------:|:----------------------------------------------------:|
-| [example3.pdf](examples/example3.pdf) | [example3-cleaned.pdf](examples/example3-cleaned.pdf) |
-
-|  ![Example 4](examples/example4.jpg)   | ![Example 4 (Cleaned)](examples/example4-cleaned.jpg)  |
-|:------------------------------------:|:----------------------------------------------------:|
-| [example4.pdf](examples/example4.pdf) | [example4-cleaned.pdf](examples/example4-cleaned.pdf) |
-
-|  ![Example 5](examples/example5.jpg)   | ![Example 5 (Cleaned)](examples/example5-cleaned.jpg)  |
-|:------------------------------------:|:----------------------------------------------------:|
-| [example5.pdf](examples/example5.pdf) | [example5-cleaned.pdf](examples/example5-cleaned.pdf) |
+| ![Example 3](examples/example3-1.jpg) |
+|:-------------------------------------:|
+|    `rf -o example3.pdf -n -g $URL`    |
 
 ## Dependencies
 
