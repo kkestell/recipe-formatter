@@ -4,7 +4,7 @@
 
 ```
 OPENAI_API_KEY='your-api-key'
-URL='https://www.allrecipes.com/recipe/7399/tres-leches-milk-cake/'
+URL='https://www.allrecipes.com/recipe/17644/german-chocolate-cake-iii/'
 ```
 
 | ![Example 1](example1-1.jpg) |
