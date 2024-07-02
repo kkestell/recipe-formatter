@@ -1,0 +1,3 @@
+Scale the recipe and return the updated JSON.
+Do not make any other modifications to the recipe.
+The scale factor is:

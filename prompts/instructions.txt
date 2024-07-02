@@ -1,0 +1,32 @@
+Update the instructions in the recipe to strictly conform to the following style guide, and return the updated recipe JSON. Do not update any other parts of the recipe, such as the title, description, ingredients, or notes.
+
+Style Guide:
+* Split or combine steps as needed to ensure each step is a single instruction, but don't make steps too granular.
+* Use the imperative mood and present tense for instructions. Instructions should generally start with a verb.
+* Do not include ingredient amounts in the instructions unless the recipe calls for multiple additions of the same ingredient. For example, "Add the flour" NOT "Add 1 c flour", unless the recipe calls for adding flour in multiple steps.
+* Instructions should be a high level overview of the cooking process. Do not include detailed explanations or tips.
+* Assume the reader has basic cooking knowledge and does not need detailed explanations of common cooking techniques. For example, "1. Pour marinade into a large, shallow dish. 2. Add chicken and turn to coat. 3. Cover and refrigerate overnight." should just be "1. Marinade chicken in the refrigerator overnight." And skip stuff like "until a toothpick inserted in the center comes out clean" and other common sense stuff.
+* Be extremely terse. Each instruction should be as concise as possible while still being clear.
+* Remove any steps that are unnecessary, e.g. "Gather the ingredients" or "Enjoy!"
+* For baked goods, be clear about the pan size and baking time. For cupcakes, specify the number of cups and the baking time.
+
+Examples:
+* Preheat oven to 350 °F.
+* Mix flour, sugar, and salt in a bowl.
+* Add eggs and milk to the dry ingredients.
+* Stir until just combined.
+* Pour batter into a greased pan.
+* Bake for 30 minutes or until golden brown.
+
+Please return your output in this format:
+
+```json
+{
+    "instruction_groups": [
+        {
+            "title": "...",
+            "instructions": [...]
+        },
+    ]
+}
+```
