@@ -5,41 +5,147 @@ import re
 import subprocess
 import sys
 import tempfile
-import time
+from fractions import Fraction
+from typing import List, Optional, Type, Callable
 
+import instructor
+import llama_cpp
 import requests
 from bs4 import BeautifulSoup
-from openai import OpenAI
-from openai.types.chat.completion_create_params import ResponseFormat
+from instructor import patch, Mode
+from llama_cpp.llama_speculative import LlamaPromptLookupDecoding
+from pydantic import BaseModel, ValidationError
+from rich.console import Console
+from rich.json import JSON
+from rich.live import Live
 from slugify import slugify
 
 
-def run_pipeline_step(args, prompt, content):
-    if isinstance(content, dict):
-        content = json.dumps(content)
-    client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
-    attempts = 0
-    while attempts < 3:
-        attempts += 1
-        try:
-            chat_completion = client.chat.completions.create(
-                messages=[{"role": "system", "content": prompt}, {"role": "user", "content": content}],
-                response_format=ResponseFormat(type="json_object"),
-                model=args.model,
-                temperature=0.0,
-                timeout=30
-            )
-            response = chat_completion.choices[0].message.content
-            break
-        except Exception as e:
-            print(f"Request failed: {e}")
-            print("Retrying in 10 seconds...")
-            time.sleep(10)
-            if attempts == 3:
-                print(f"Failed after 3 attempts: {e}")
-                raise e
-            continue
-    return json.loads(response)
+class IngredientGroup(BaseModel):
+    title: str
+    ingredients: List[str]
+
+
+class InstructionGroup(BaseModel):
+    title: str
+    instructions: List[str]
+
+
+class RecipeModel(BaseModel):
+    title: str
+    description: Optional[str]
+    ingredient_groups: List[IngredientGroup]
+    instruction_groups: List[InstructionGroup]
+
+
+class RecipeIngredientsModel(BaseModel):
+    ingredient_groups: List[IngredientGroup]
+
+
+class RecipeInstructionsModel(BaseModel):
+    instruction_groups: List[InstructionGroup]
+
+
+class Llama:
+    def __init__(self):
+        self.llama = llama_cpp.Llama(
+            model_path="/home/kyle/src/public/recipe-formatter/models/gemma-2-9b-it-Q6_K.gguf",
+            # model_path="/home/kyle/src/public/recipe-formatter/models/Phi-3-mini-4k-instruct-fp16.gguf",
+            n_gpu_layers=-1,
+            chat_format="chatml",
+            n_ctx=8192,
+            draft_model=LlamaPromptLookupDecoding(num_pred_tokens=2),
+            logits_all=True,
+            verbose=False,
+            temperature=0
+        )
+        self.create = patch(
+            create=self.llama.create_chat_completion_openai_v1,
+            mode=Mode.JSON_SCHEMA,
+        )
+        self.console = Console()
+        self.live = Live(console=self.console)
+
+    def _create_response_stream(self, prompt: str, response_model: Type[BaseModel], response_schema, callback: Callable):
+        self.console.print(f"[dim]{prompt}[/dim]", highlight=False)
+        response_stream = self.create(
+            response_model=instructor.Partial[response_model],
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object", "schema": response_schema},
+            max_tokens=8192,
+            stream=True
+        )
+        final_obj = None
+        with self.live:
+            for response in response_stream:
+                try:
+                    obj = response.model_dump()
+                    callback(obj)  # Invoke callback with the new data
+                    final_obj = obj
+                except ValidationError as e:
+                    self.console.print(f"Validation error: {e}")
+        return final_obj
+
+    def prompt_all(self, prompt: str, callback: Callable) -> Optional[RecipeModel]:
+        response_schema = self._recipe_schema()
+        return self._create_response_stream(prompt, RecipeModel, response_schema, callback)
+
+    def prompt_ingredients(self, prompt: str, callback: Callable) -> Optional[RecipeIngredientsModel]:
+        response_schema = {
+            "type": "object",
+            "properties": {
+                "ingredient_groups": {
+                    "type": "array",
+                    "items": self._group_schema("ingredients")
+                }
+            },
+            "required": ["ingredient_groups"]
+        }
+        return self._create_response_stream(prompt, RecipeIngredientsModel, response_schema, callback)
+
+    def prompt_instructions(self, prompt: str, callback: Callable) -> Optional[RecipeInstructionsModel]:
+        response_schema = {
+            "type": "object",
+            "properties": {
+                "instruction_groups": {
+                    "type": "array",
+                    "items": self._group_schema("instructions")
+                }
+            },
+            "required": ["instruction_groups"]
+        }
+        return self._create_response_stream(prompt, RecipeInstructionsModel, response_schema, callback)
+
+    def _group_schema(self, item_type: str):
+        return {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                item_type: {
+                    "type": "array",
+                    "items": {"type": "string"}
+                }
+            },
+            "required": ["title", item_type]
+        }
+
+    def _recipe_schema(self):
+        return {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string"},
+                "description": {"type": "string"},
+                "ingredient_groups": {
+                    "type": "array",
+                    "items": self._group_schema("ingredients")
+                },
+                "instruction_groups": {
+                    "type": "array",
+                    "items": self._group_schema("instructions")
+                }
+            },
+            "required": ["title", "ingredient_groups", "instruction_groups"]
+        }
 
 
 def extract_recipe_json(soup):
@@ -134,8 +240,74 @@ def escape_latex(text):
     return "".join(mapping.get(c, c) for c in text)
 
 
-def fix_fractions(text):
-    return re.sub(r'(\d)/(\d)', r'\1⁄\2', text)
+def normalize_fractions(val):
+    val = re.sub(r'\(\$.+\)', '', val)
+    normalized = _decimal_to_fraction(_fraction_to_decimal(val))
+    normalized = re.sub(r'(\d+)/(\d+)', r'\1⁄\2', normalized)
+    return normalized
+
+
+def normalize_temperatures(val):
+    val = re.sub(r'(\d{3}) degrees F', r'\1 °F', val)
+    val = re.sub(r'(\d{3}) degrees C', r'\1 °C', val)
+    return val
+
+
+def _decimal_to_fraction(val):
+    def replace_decimal(match):
+        d = match.groups(0)[0]
+        f = _mixed_number(Fraction(d).limit_denominator(8))
+        return f
+    result = re.sub(r'([0-9]*\.?[0-9]+)', replace_decimal, val)
+    return result
+
+
+def _mixed_number(fraction: Fraction) -> str:
+    whole = fraction.numerator // fraction.denominator
+    remainder = fraction.numerator % fraction.denominator
+    if whole == 0:
+        return f"{fraction.numerator}/{fraction.denominator}"
+    elif remainder == 0:
+        return str(whole)
+    else:
+        return f"{whole} {remainder}/{fraction.denominator}"
+
+
+def _fraction_to_decimal(val):
+    def replace_fraction(s):
+        i, f = s.groups(0)
+        f = Fraction(f)
+        return str(int(i) + float(f))
+    result = re.sub(r'(?:(\d+)[-\s])?(\d+/\d+)', replace_fraction, val)
+    return result
+
+
+def _unicode_fraction_to_ascii(val):
+    fractions = {
+        "¼": "1/4",
+        "⅓": "1/3",
+        "½": "1/2",
+        "⅖": "2/5",
+        "⅗": "3/5",
+        "⅘": "4/5",
+        "⅙": "1/6",
+        "⅐": "1/7",
+        "⅛": "1/8",
+        "⅑": "1/9",
+        "⅒": "1/10",
+        "⅚": "5/6",
+        "⅜": "3/8",
+        "⅝": "5/8",
+        "⅞": "7/8",
+        "¾": "3/4",
+        "⅔": "2/3",
+        "⅕": "1/5"
+    }
+
+    for unicode_frac, ascii_frac in fractions.items():
+        val = val.replace(unicode_frac, ascii_frac)
+
+    return val
 
 
 def json_to_latex(recipe):
@@ -260,7 +432,7 @@ def recipe_to_markdown(recipe):
     if source:
         md += f"Source: {source}"
 
-    return md
+    return md.strip()
 
 
 def write_output(recipe, args):
@@ -302,14 +474,8 @@ def generate_pdf(recipe, verbose):
             return f.read()
 
 
-def load_prompts():
-    config_dir = os.path.join(os.environ.get('XDG_CONFIG_HOME', os.path.join(os.environ['HOME'], '.config')), 'recipe-formatter')
-    prompts = {}
-    for filename in os.listdir(os.path.join(config_dir, 'prompts')):
-        if filename.endswith(".txt"):
-            with open(os.path.join(config_dir, 'prompts', filename), 'r') as f:
-                prompts[filename[:-4]] = f.read()
-    return prompts
+def display_update(data, live):
+    live.update(JSON(json.dumps(data, ensure_ascii=False)))
 
 
 def main():
@@ -319,81 +485,123 @@ def main():
 
     parser.add_argument("-o", "--output", type=str, help="Output file to write the processed recipe. If not provided, print to stdout.")
     parser.add_argument("-f", "--format", type=str, help="Output format (md, tex, pdf, json)")
-
     parser.add_argument("-n", "--normalize", action="store_true", help="Normalize the recipe to a standard format")
     parser.add_argument("-t", "--tips", action="store_true", help="Include tips from reviews in the output")
     parser.add_argument("-g", "--group", action="store_true", help="Add groups to ingredients and instructions")
     parser.add_argument("-s", "--scale", type=float, default=1.0, help="Scale the recipe by the given factor")
     parser.add_argument("-r", "--revise", type=str, help="Revisions to make to the recipe")
-
     parser.add_argument("-v", "--verbose", action="store_true", help="Increase output verbosity")
-
-    parser.add_argument("-m", "--model", type=str, default="gpt-4o", help="OpenAI model to use for rewriting the recipe.")
+    # parser.add_argument("-m", "--model", type=str, default="gpt-4o", help="OpenAI model to use for rewriting the recipe.")
 
     args = parser.parse_args()
 
-    prompts = load_prompts()
+    console = Console()
 
-    if args.verbose:
-        print(f"Fetching recipe from {args.url}...")
+    console.print(f"[bold]Fetching recipe from {args.url}...[/bold]", highlight=False)
 
     recipe, reviews = fetch_recipe_from_url(args.url)
 
-    if args.verbose:
-        print("Converting recipe to JSON format...")
+    recipe = normalize_fractions(recipe)
+    recipe = normalize_temperatures(recipe)
 
-    recipe = run_pipeline_step(args, prompts['json'], recipe)
+    llama = Llama()
 
-    if args.verbose:
-        print(json.dumps(recipe, indent=4))
+    # ==================================================================================================================
+    # Convert to JSON
+    # ==================================================================================================================
+
+    with Live(console=console, refresh_per_second=4) as live:
+        console.print(f"[bold]Converting recipe to JSON...[/bold]", highlight=False)
+        prompt = f"""Please convert the following recipe to JSON format:\n{recipe}"""
+        recipe = llama.prompt_all(prompt, lambda data: display_update(data, live))
+
+    # ==================================================================================================================
+    # Update ingredients and instructions
+    # ==================================================================================================================
 
     if args.normalize:
-        if args.verbose:
-            print("Normalizing ingredients and instructions...")
+        with Live(console=console, refresh_per_second=4) as live:
+            console.print(f"[bold]Normalizing ingredients...[/bold]", highlight=False)
+            prompt = f"""Please update the recipe's ingredients.
+            
+* Convert all decimal amounts to fractions. Use the FRACTION SLASH ⁄, e.g., 0.5 -> 1⁄2.
+* Express measurements in inches using QUOTATION MARK ", e.g., 9".
+* Use the MULTIPLICATION SIGN × for rectangular measurements, e.g., 9×13".
+* Temperatures should use the DEGREE SIGN ° and be in Fahrenheit only, e.g., 350 °F.
+* Include packaged ingredient units in parentheses, e.g., "1 stick (1⁄2 c) unsalted butter", "1 can (15 oz) black
+  beans".
+* Employ standard units: 1 cup, 2 cups, 1 teaspoon, 1/2 tablespoon, 1 1⁄2 gallons, 1⁄4 ounce, 1 pound, 1 kilogram, etc...
+* Exclude ingredients used solely for greasing or flouring pans.   
+* Ingredient group titles must be prepositional phrases, e.g., "For the Cake", "For the Frosting". 
+    
+The recipe is:
+{recipe}"""
+            recipe_ingredients = llama.prompt_ingredients(prompt, lambda data: display_update(data, live))
+            recipe['ingredient_groups'] = recipe_ingredients['ingredient_groups']
 
-        updated_ingredient_groups = run_pipeline_step(args, prompts['ingredients'], recipe)
-        recipe['ingredient_groups'] = updated_ingredient_groups['ingredient_groups']
+        with Live(console=console, refresh_per_second=4) as live:
+            console.print(f"[bold]Normalizing instructions...[/bold]", highlight=False)
+            prompt = f"""Please update the recipe's instructions.
 
-        updated_instruction_groups = run_pipeline_step(args, prompts['instructions'], recipe)
-        recipe['instruction_groups'] = updated_instruction_groups['instruction_groups']
+* Split or combine steps as needed to ensure each step is a single instruction, but don't make steps too granular.
+* Use the imperative mood and present tense for instructions. Instructions should generally start with a verb.
+* Do not include ingredient amounts in the instructions unless the recipe calls for multiple additions of the same
+  ingredient. For example, "Add the flour" NOT "Add 1 cup flour", unless the recipe calls for adding flour in multiple
+  steps.
+* Instructions should be a high level overview of the cooking process. Do not include detailed explanations or tips.
+* Assume the reader has basic cooking knowledge and does not need detailed explanations of common cooking techniques.
+  For example, "1. Pour marinade into a large, shallow dish. 2. Add chicken and turn to coat. 3. Cover and refrigerate
+  overnight." should just be "1. Marinade chicken in the refrigerator overnight."
+* Remove any steps that are unnecessary, e.g. "Gather the ingredients" or "Enjoy!"
+* For baked goods, be clear about the pan size and baking time. For cupcakes, specify the number of cups and the baking
+  time.
+* Instruction group titles must be gerund phrases, e.g., "Making the Cake", "Making the Frosting".
+
+The recipe is:
+{recipe}"""
+            recipe_instructions = llama.prompt_instructions(prompt, lambda data: display_update(data, live))
+            recipe['instruction_groups'] = recipe_instructions['instruction_groups']
+
+    # ==================================================================================================================
+    # Group ingredients and instructions
+    # ==================================================================================================================
 
     if args.group:
-        if args.verbose:
-            print("Grouping ingredients and instructions...")
+        with Live(console=console, refresh_per_second=4) as live:
+            console.print(f"[bold]Grouping ingredients and instructions...[/bold]", highlight=False)
+            prompt = f"""Please group the recipe's ingredients and instructions.
+            
+* Ingredient titles must be prepositional phrases, e.g., "For the Cake", "For the Frosting".
+* Instruction titles must be gerund phrases, e.g., "Making the Cake", "Making the Frosting".
+          
+The recipe is:
+{recipe}"""
+            recipe = llama.prompt_all(prompt, lambda data: display_update(data, live))
 
-        recipe = run_pipeline_step(args, prompts['group'], recipe)
-
-    if args.normalize:
-        if args.verbose:
-            print("Normalizing title, description, and notes...")
-
-        recipe = run_pipeline_step(args, prompts['title_description_notes'], recipe)
-
-    if args.scale != 1.0:
-        if args.verbose:
-            print(f"Scaling the recipe by {args.scale}...")
-
-        recipe = run_pipeline_step(args, prompts['scale'], recipe)
-
-    if args.tips and reviews:
-        if args.verbose:
-            print("Summarizing common themes from reviews...")
-
-        reviews_text = "\n".join(reviews)
-        recipe_reviews = run_pipeline_step(args, f"{prompts['tips']}", reviews_text)
-        recipe['reviews'] = recipe_reviews.get('paragraphs', [])
+    # ==================================================================================================================
+    # Revise recipe
+    # ==================================================================================================================
 
     if args.revise:
-        if args.verbose:
-            print("Making user revisions to the recipe...")
+        with Live(console=console, refresh_per_second=4) as live:
+            console.print(f"[bold]Revising the recipe...[/bold]", highlight=False)
+            prompt = f"""Please revise the recipe according to the following user request:
+{args.revise}
+The recipe is:
+{recipe}"""
+            recipe = llama.prompt_all(prompt, lambda data: display_update(data, live))
 
-        recipe = run_pipeline_step(args, f"{prompts['revise']}\n\n{args.revise}", recipe)
+    # ==================================================================================================================
+    # Finalize recipe
+    # ==================================================================================================================
 
-    if args.normalize:
-        if args.verbose:
-            print("Finalizing the recipe...")
+    recipe['notes'] = []
+    recipe['reviews'] = []
+    recipe['source'] = args.url
+    recipe['scale'] = args.scale
 
-        recipe = run_pipeline_step(args, prompts['finalize'], recipe)
+    recipe['ingredient_groups'] = [group for group in recipe['ingredient_groups'] if group['ingredients']]
+    recipe['instruction_groups'] = [group for group in recipe['instruction_groups'] if group['instructions']]
 
     if len(recipe['ingredient_groups']) == 1:
         recipe['ingredient_groups'][0]['title'] = ''
@@ -404,12 +612,14 @@ def main():
     recipe['source'] = args.url
     recipe['scale'] = args.scale
 
-    write_output(recipe, args)
+    # ==================================================================================================================
+    # Write output
+    # ==================================================================================================================
 
-    # also write a markdown version of the recipe
-    # args.format = 'md'
-    # args.output = "recipe.md"
-    # write_output(recipe, args)
+    console.print(f"[bold]Final recipe[/bold]", highlight=False)
+    console.print(recipe)
+
+    write_output(recipe, args)
 
 
 if __name__ == "__main__":

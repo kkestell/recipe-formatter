@@ -2,7 +2,7 @@
 
 ## Overview
 
-Uses the OpenAI API to reformat a recipe from a URL convert it into JSON, markdown, LaTeX, or PDF.
+Clean up and reformat recipes using llama.cpp and output JSON, markdown, LaTeX, or PDF.
 
 ## Usage
 
