@@ -30,10 +30,6 @@ Supported formats: `json`, `md`, `tex`, and `pdf`.
 
 If no format is specified, the output format will be inferred from the output file extension. If no output file is specified, or the specified output file has an extension that is not recognized, the recipe will be formatted as JSON.
 
-#### `-m, --model MODEL`
-
-Specify the OpenAI model to use for recipe formatting. Defaults to `gpt-4o`.
-
 #### `-t, --tips`
 
 Include tips from reviews in the output. This is a boolean flag.
@@ -61,7 +57,6 @@ See the [examples](examples) directory for more examples.
 ### PDF Output
 
 ```
-OPENAI_API_KEY='your-api-key'
 URL='https://www.allrecipes.com/recipe/17644/german-chocolate-cake-iii/'
 ```
 
