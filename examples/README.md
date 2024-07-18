@@ -3,7 +3,6 @@
 ## PDF Output
 
 ```
-OPENAI_API_KEY='your-api-key'
 URL='https://www.allrecipes.com/recipe/17644/german-chocolate-cake-iii/'
 ```
 
