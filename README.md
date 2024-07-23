@@ -2,7 +2,11 @@
 
 ## Overview
 
-Clean up and reformat recipes using llama.cpp and output JSON, markdown, LaTeX, or PDF.
+Clean up and reformat recipes using a large language model and output JSON, markdown, LaTeX, or PDF.
+
+## Demo
+
+![Demo](demo.gif)
 
 ## Usage
 
@@ -30,19 +34,11 @@ Supported formats: `json`, `md`, `tex`, and `pdf`.
 
 If no format is specified, the output format will be inferred from the output file extension. If no output file is specified, or the specified output file has an extension that is not recognized, the recipe will be formatted as JSON.
 
-#### `-t, --tips`
-
-Include tips from reviews in the output. This is a boolean flag.
-
 #### `-g, --group`
 
 Add groups to ingredients and instructions in the output. This is a boolean flag.
 
-#### `-s, --scale SCALE`
-
-Scale the recipe by the given factor. The default scaling factor is `1.0`.
-
-#### `-r, --revise REVISIONS`
+#### `-r, --revisions REVISIONS`
 
 Specify revisions to make to the recipe. This option allows for custom textual modifications.
 
