@@ -10,3 +10,4 @@ wheels/
 main.*/
 models/
 prompts/
+config.json
