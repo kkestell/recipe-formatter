@@ -6,7 +6,7 @@ Clean up and reformat recipes using a large language model and output JSON, mark
 
 ## Demo
 
-![Demo](demo.gif)
+![Demo](examples/example.gif)
 
 ## Usage
 
@@ -24,15 +24,15 @@ If the file path contains the special token `{title}`, it will be replaced with 
 
 If no output path is specified, the recipe will be printed to stdout.
 
-#### `-n, --normalize`
-
-Normalize the recipe by using standard unit abbreviations and formatting. This is a boolean flag.
-
 #### `-f, --format FORMAT`
 
 Supported formats: `json`, `md`, `tex`, and `pdf`.
 
 If no format is specified, the output format will be inferred from the output file extension. If no output file is specified, or the specified output file has an extension that is not recognized, the recipe will be formatted as JSON.
+
+#### `-n, --normalize`
+
+Normalize the recipe by using standard unit abbreviations and formatting. This is a boolean flag.
 
 #### `-g, --group`
 
@@ -58,7 +58,7 @@ URL='https://www.allrecipes.com/recipe/17644/german-chocolate-cake-iii/'
 
 | ![Example 1](examples/example1-1.jpg) | ![Example 2](examples/example2-1.jpg) | ![Example 3](examples/example3-1.jpg) |
 |:-------------------------------------:|:-------------------------------------:|:-------------------------------------:|
-|       `rf -o example1.pdf $URL`       |     `rf -o example2.pdf -n $URL`      |    `rf -o example3.pdf -n -g $URL`    |
+|       `rf -o example1.pdf $URL`       |     `rf -n -o example2.pdf $URL`      |    `rf -n -g -o example3.pdf $URL`    |
 
 ## Dependencies
 
@@ -83,5 +83,5 @@ sudo pacman -Sy texlive adobe-source-serif-fonts
 Build a self-contained executable (`rf`) using Nuitka and install to `~/.local/bin`:
 
 ```
-make install
+just install
 ```
