@@ -13,7 +13,7 @@ from rich.live import Live
 from slugify import slugify
 
 from handlers.openai_handler import OpenAIModelHandler
-# from handlers.llama_handler import LlamaModelHandler
+from handlers.llama_handler import LlamaModelHandler
 
 
 def load_config(config_path):
@@ -48,8 +48,7 @@ def main():
             raise ValueError("OpenAI API key not found in config or environment variables")
         llm = OpenAIModelHandler(api_key, model=config.get("openai_model", "gpt-4o-mini"))
     elif config["engine"] == "llama":
-        # llm = LlamaModelHandler(config["llama_model_path"])
-        raise NotImplementedError("Llama model is not implemented yet")
+        llm = LlamaModelHandler(config["llama_model_path"])
     else:
         raise ValueError(f"Unsupported engine: {config['engine']}")
 
