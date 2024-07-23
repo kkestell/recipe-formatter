@@ -61,12 +61,17 @@ def main():
         else:
             return method(prompt, lambda data: None)
 
-    if isinstance(recipe, str):
-        recipe = process_with_live(
-            "Converting recipe to JSON...",
-            f"Please convert the recipe to JSON.\nThe recipe is:\n{recipe}",
-            llm.get_recipe
-        )
+    # if isinstance(recipe, str):
+    recipe = process_with_live(
+        "Converting recipe to JSON...",
+        f"""Please convert the recipe to JSON. 
+        * Try to provide as literal a conversion as possible. Do not change units, amounts, ingredients, instructions, etc.
+        * Place all ingredients in a single group with a null name.
+        * Place all instructions in a single group with a null name.
+        The recipe is:
+        {recipe}""",
+        llm.get_recipe
+    )
 
     if not recipe:
         console.print("Failed to process recipe")
@@ -86,7 +91,6 @@ def main():
             beans".
             * Employ standard units: 1 cup, 2 cups, 1 teaspoon, 1/2 tablespoon, 1 1⁄2 gallons, 1⁄4 ounce, 1 pound, 1 kilogram, etc...
             * Exclude ingredients used solely for greasing or flouring pans.   
-            * Ingredient group titles must be prepositional phrases, e.g., "For the Cake", "For the Frosting". 
             The recipe is:
             {recipe}""",
             llm.get_ingredients
@@ -105,7 +109,8 @@ def main():
             * Assume the reader has basic cooking knowledge and does not need detailed explanations of common cooking techniques.
             * Remove any steps that are unnecessary, e.g. "Gather the ingredients" or "Enjoy!"
             * For baked goods, be clear about the pan size and baking time.
-            * Instruction group titles must be gerund phrases, e.g., "Making the Cake", "Making the Frosting".
+            * Do not put the ingredients into multiple groups.
+            * Do not put the instructions into multiple groups.
             The recipe is:
             {recipe}""",
             llm.get_instructions
@@ -118,6 +123,8 @@ def main():
             f"""Please group the recipe's ingredients and instructions and return JSON.
             * Ingredient titles should take the form "For the Cake", "For the Frosting", etc.
             * Instruction titles should take the form "Making the Cake", "Making the Frosting", "Grilling the Chicken", etc.
+            * Ingredient group titles must be prepositional phrases, e.g., "For the Cake", "For the Frosting". 
+            * Instruction group titles must be gerund phrases, e.g., "Making the Cake", "Making the Frosting".
             The recipe is:
             {recipe}""",
             llm.get_recipe
