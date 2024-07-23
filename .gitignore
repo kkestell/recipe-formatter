@@ -8,3 +8,5 @@ wheels/
 .pdm-python
 .idea/
 main.*/
+models/
+prompts/
