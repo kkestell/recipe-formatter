@@ -2,18 +2,48 @@ import argparse
 import json
 import os
 import sys
+from typing import List
 
 from recipy.latex import recipe_to_latex
 from recipy.markdown import recipe_to_markdown
 from recipy.microdata import recipe_from_url
+from recipy.models import InstructionGroup, IngredientGroup, Recipe
 from recipy.pdf import recipe_to_pdf
 from rich.console import Console
 from rich.json import JSON
 from rich.live import Live
 from slugify import slugify
+from pydantic import BaseModel
 
 from handlers.openai_handler import OpenAIModelHandler
-from handlers.llama_handler import LlamaModelHandler
+
+
+class RecipeIngredients(BaseModel):
+    ingredient_groups: List[IngredientGroup]
+
+
+class RecipeInstructions(BaseModel):
+    instruction_groups: List[InstructionGroup]
+
+
+class IngredientList(BaseModel):
+    ingredients: List[str]
+
+
+class InstructionList(BaseModel):
+    instructions: List[str]
+
+
+class GroupedRecipe(BaseModel):
+    title: str
+    ingredient_groups: List[IngredientGroup]
+    instruction_groups: List[InstructionGroup]
+
+
+class SimpleRecipe(BaseModel):
+    title: str
+    ingredients: List[str]
+    instructions: List[str]
 
 
 def load_config(config_path):
@@ -38,8 +68,6 @@ def main():
 
     config = load_config(args.config)
 
-    recipe = recipe_from_url(args.url)
-
     console = Console()
 
     if config["engine"] == "openai":
@@ -47,97 +75,136 @@ def main():
         if not api_key:
             raise ValueError("OpenAI API key not found in config or environment variables")
         llm = OpenAIModelHandler(api_key, model=config.get("openai_model", "gpt-4o-mini"))
-    elif config["engine"] == "llama":
-        llm = LlamaModelHandler(config["llama_model_path"])
     else:
         raise ValueError(f"Unsupported engine: {config['engine']}")
 
-    def process_with_live(message, prompt, method):
-        if args.verbose:
-            with Live(console=console, refresh_per_second=4) as live:
-                live.console.print(message, highlight=False)
-                return method(prompt, lambda data: live.update(JSON(json.dumps(data.model_dump(), indent=2))))
+    live = Live(console=console, refresh_per_second=4) if args.verbose else None
+
+    def update_live(data):
+        if live:
+            live.update(JSON(json.dumps(data.model_dump(), indent=2)))
+
+    if live:
+        live.start()
+
+    try:
+        recipe = recipe_from_url(args.url)
+
+        if isinstance(recipe, Recipe):
+            recipe = SimpleRecipe(title=recipe.title, ingredients=[i for ig in recipe.ingredient_groups for i in ig.ingredients], instructions=[i for ig in recipe.instruction_groups for i in ig.instructions])
+        elif isinstance(recipe, str):
+            recipe = llm.query(
+                f"""Please convert the recipe to JSON. 
+                * Try to provide as literal a conversion as possible. Do not change units, amounts, ingredients, instructions, etc.
+                The recipe is:
+                {recipe}""",
+                SimpleRecipe,
+                lambda data: update_live(data) if live else lambda _: None
+            )
+            if not recipe:
+                raise ValueError("Failed to convert recipe to JSON")
         else:
-            return method(prompt, lambda data: None)
+            raise ValueError(f"Invalid recipe type: {type(recipe)}")
 
-    # if isinstance(recipe, str):
-    recipe = process_with_live(
-        "Converting recipe to JSON...",
-        f"""Please convert the recipe to JSON. 
-        * Try to provide as literal a conversion as possible. Do not change units, amounts, ingredients, instructions, etc.
-        * Place all ingredients in a single group with a null name.
-        * Place all instructions in a single group with a null name.
-        The recipe is:
-        {recipe}""",
-        llm.get_recipe
-    )
+        if args.normalize:
+            def normalize_ingredients_update(data):
+                recipe.ingredients = data.ingredients
+                update_live(recipe)
 
-    if not recipe:
-        console.print("Failed to process recipe")
-        return
+            llm.query(
+                f"""Please update the recipe's ingredients and return JSON.
+                * Convert all decimal amounts to fractions.
+                * Include packaged ingredient units in parentheses, e.g., "1 stick (1⁄2 cup) unsalted butter", "1 can (15 ounce) black beans".
+                * Expand all unit abbreviations
+                * Exclude ingredients used solely for greasing or flouring pans.
+                The recipe's ingredients are:
+                {recipe.ingredients}""",
+                IngredientList,
+                normalize_ingredients_update if live else lambda data: None
+            )
 
-    recipe.reviews = []
+            def normalize_instructions_update(data):
+                recipe.instructions = data.instructions
+                update_live(recipe)
 
-    if args.normalize:
-        response = process_with_live(
-            "Normalizing ingredients...",
-            f"""Please update the recipe's ingredients and return JSON.
-            * Convert all decimal amounts to fractions. Use the FRACTION SLASH ⁄, e.g., 0.5 -> 1⁄2.
-            * Express measurements in inches using QUOTATION MARK ", e.g., 9".
-            * Use the MULTIPLICATION SIGN × for rectangular measurements, e.g., 9×13".
-            * Temperatures should use the DEGREE SIGN ° and be in Fahrenheit only, e.g., 350 °F.
-            * Include packaged ingredient units in parentheses, e.g., "1 stick (1⁄2 c) unsalted butter", "1 can (15 oz) black
-            beans".
-            * Employ standard units: 1 cup, 2 cups, 1 teaspoon, 1/2 tablespoon, 1 1⁄2 gallons, 1⁄4 ounce, 1 pound, 1 kilogram, etc...
-            * Exclude ingredients used solely for greasing or flouring pans.   
-            The recipe is:
-            {recipe}""",
-            llm.get_ingredients
+            llm.query(
+                f"""Please update the recipe's instructions and return JSON.
+                * Split or combine steps as needed to ensure each step is a single instruction, but don't make steps too granular.
+                * Use the imperative mood and present tense for instructions. Instructions should generally start with a verb.
+                * Do not include ingredient amounts in the instructions unless the recipe calls for multiple additions of the same
+                  ingredient. For example, "Add the flour" NOT "Add 1 cup flour", unless the recipe calls for adding flour in multiple
+                  steps.
+                * Instructions should be a high level overview of the cooking process. Do not include detailed explanations or tips.
+                * Assume the reader has basic cooking knowledge and does not need detailed explanations of common cooking techniques.
+                * Remove any steps that are unnecessary, e.g. "Gather the ingredients" or "Enjoy!"
+                * For baked goods, be clear about the pan size and baking time.
+                * Do not put the ingredients into multiple groups.
+                * Do not put the instructions into multiple groups.
+                The recipe's instructions are:
+                {recipe.instructions}""",
+                InstructionList,
+                normalize_instructions_update if live else lambda data: None
+            )
+
+        if args.revisions:
+            def revise_update(data):
+                recipe.ingredients = data.ingredients
+                recipe.instructions = data.instructions
+                update_live(recipe)
+
+            recipe = llm.query(
+                f"""Please revise the recipe and return JSON.
+                The revisions are:
+                {args.revisions}
+                The recipe is:
+                {recipe}""",
+                Recipe,
+                revise_update if live else lambda data: None
+            )
+
+        if args.group:
+            recipe = GroupedRecipe(
+                title=recipe.title,
+                ingredient_groups=[IngredientGroup(name=None, ingredients=recipe.ingredients)],
+                instruction_groups=[InstructionGroup(name=None, instructions=recipe.instructions)])
+
+            def group_update(data):
+                if data.ingredient_groups:
+                    recipe.ingredient_groups = data.ingredient_groups
+
+                if data.instruction_groups:
+                    recipe.instruction_groups = data.instruction_groups
+
+                update_live(recipe)
+
+            recipe = llm.query(
+                f"""Please group the recipe's ingredients and instructions and return JSON. The user has requested
+                that both the ingredients and instructions be grouped, so you MUST return at least 2 ingredient groups and 2 instruction groups.
+                * Ingredient group names must be prepositional phrases, e.g., "For the Cake", "For the Frosting". 
+                * Instruction group names must be gerund phrases, e.g., "Making the Cake", "Making the Frosting".
+                The recipe is:
+                {recipe}""",
+                GroupedRecipe,
+                group_update if live else lambda data: None
+            )
+
+    finally:
+        if live:
+            live.stop()
+
+    if isinstance(recipe, SimpleRecipe):
+        recipe = Recipe(
+            title=recipe.title,
+            description=None,
+            ingredient_groups=[IngredientGroup(name=None, ingredients=recipe.ingredients)],
+            instruction_groups=[InstructionGroup(name=None, instructions=recipe.instructions)]
         )
-        recipe.ingredient_groups = response.ingredient_groups
-
-        response = process_with_live(
-            "Normalizing instructions...",
-            f"""Please update the recipe's instructions and return JSON.
-            * Split or combine steps as needed to ensure each step is a single instruction, but don't make steps too granular.
-            * Use the imperative mood and present tense for instructions. Instructions should generally start with a verb.
-            * Do not include ingredient amounts in the instructions unless the recipe calls for multiple additions of the same
-              ingredient. For example, "Add the flour" NOT "Add 1 cup flour", unless the recipe calls for adding flour in multiple
-              steps.
-            * Instructions should be a high level overview of the cooking process. Do not include detailed explanations or tips.
-            * Assume the reader has basic cooking knowledge and does not need detailed explanations of common cooking techniques.
-            * Remove any steps that are unnecessary, e.g. "Gather the ingredients" or "Enjoy!"
-            * For baked goods, be clear about the pan size and baking time.
-            * Do not put the ingredients into multiple groups.
-            * Do not put the instructions into multiple groups.
-            The recipe is:
-            {recipe}""",
-            llm.get_instructions
-        )
-        recipe.instruction_groups = response.instruction_groups
-
-    if args.group:
-        recipe = process_with_live(
-            "Grouping ingredients and instructions...",
-            f"""Please group the recipe's ingredients and instructions and return JSON.
-            * Ingredient titles should take the form "For the Cake", "For the Frosting", etc.
-            * Instruction titles should take the form "Making the Cake", "Making the Frosting", "Grilling the Chicken", etc.
-            * Ingredient group titles must be prepositional phrases, e.g., "For the Cake", "For the Frosting". 
-            * Instruction group titles must be gerund phrases, e.g., "Making the Cake", "Making the Frosting".
-            The recipe is:
-            {recipe}""",
-            llm.get_recipe
-        )
-
-    if args.revisions:
-        recipe = process_with_live(
-            "Revising recipe...",
-            f"""Please revise the recipe and return JSON.
-            The revisions are:
-            {args.revisions}
-            The recipe is:
-            {recipe}""",
-            llm.get_recipe
+    elif isinstance(recipe, GroupedRecipe):
+        recipe = Recipe(
+            title=recipe.title,
+            description=None,
+            ingredient_groups=recipe.ingredient_groups,
+            instruction_groups=recipe.instruction_groups
         )
 
     output_format = args.format

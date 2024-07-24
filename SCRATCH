@@ -1,0 +1,2 @@
+asciinema rec -c "rf -v -f md -n -g https://www.allrecipes.com/recipe/7360/banana-cake-ii/" examples/example.cast --overwrite
+~/.cargo/bin/agg examples/example.cast examples/example.gif --theme=github-dark
