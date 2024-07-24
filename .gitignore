@@ -1,6 +1,5 @@
 # Project specific
-main.dist
-main.onefile-build
+main.*/
 models/
 prompts/
 config.json
