@@ -471,7 +471,7 @@ files = [
 
 [[package]]
 name = "instructor"
-version = "1.3.5"
+version = "1.3.7"
 requires_python = "<4.0,>=3.9"
 summary = "structured outputs for llm"
 groups = ["default"]
@@ -487,8 +487,8 @@ dependencies = [
     "typer<1.0.0,>=0.9.0",
 ]
 files = [
-    {file = "instructor-1.3.5-py3-none-any.whl", hash = "sha256:067372a6bbecf6617720365f1afdc100fecba679b0e152a00918442c2e3375ff"},
-    {file = "instructor-1.3.5.tar.gz", hash = "sha256:fe725db5b4b32ca08ca1e820e699cf871b52cb3385b95de37ffb97d5b0a49c18"},
+    {file = "instructor-1.3.7-py3-none-any.whl", hash = "sha256:9a4eac99aef3af4d72c625a3e500add118c3f7af414e0ca3fafa946be07077b7"},
+    {file = "instructor-1.3.7.tar.gz", hash = "sha256:8ed68b8a4d9ab9b7bafe553624222c02497a8f0bd788f9df7b404549967a5863"},
 ]
 
 [[package]]
@@ -685,7 +685,7 @@ files = [
 
 [[package]]
 name = "nuitka"
-version = "2.4"
+version = "2.4.2"
 summary = "Python compiler with full language support and CPython compatibility"
 groups = ["dev"]
 dependencies = [
@@ -693,12 +693,12 @@ dependencies = [
     "zstandard>=0.15",
 ]
 files = [
-    {file = "Nuitka-2.4.tar.gz", hash = "sha256:703c9b28a8db5da9cae138650089fc86119e6113713464d2da909dfbc7a2ca51"},
+    {file = "Nuitka-2.4.2.tar.gz", hash = "sha256:cf57c72417e6ce1959c34a404f055cbe3714306f01455917426604b4cfec7980"},
 ]
 
 [[package]]
 name = "openai"
-version = "1.36.0"
+version = "1.37.1"
 requires_python = ">=3.7.1"
 summary = "The official Python library for the openai API"
 groups = ["default"]
@@ -713,8 +713,8 @@ dependencies = [
     "typing-extensions<5,>=4.7",
 ]
 files = [
-    {file = "openai-1.36.0-py3-none-any.whl", hash = "sha256:82b74ded1fe2ea94abb19a007178bc143675f1b6903cebd63e2968d654bb0a6f"},
-    {file = "openai-1.36.0.tar.gz", hash = "sha256:a124baf0e1657d6156e12248642f88489cd030be8655b69bc1c13eb50e71a93d"},
+    {file = "openai-1.37.1-py3-none-any.whl", hash = "sha256:9a6adda0d6ae8fce02d235c5671c399cfa40d6a281b3628914c7ebf244888ee3"},
+    {file = "openai-1.37.1.tar.gz", hash = "sha256:faf87206785a6b5d9e34555d6a3242482a6852bc802e453e2a891f68ee04ce55"},
 ]
 
 [[package]]
