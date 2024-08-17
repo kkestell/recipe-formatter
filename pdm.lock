@@ -907,9 +907,9 @@ files = [
 
 [[package]]
 name = "python-recipy"
-version = "0.1.0"
+version = "0.1.4"
 requires_python = ">=3.8"
-summary = "Parse recipes from web pages that use JSON-LD structured data and output Markdown, LaTeX, and PDF."
+summary = "Extract recipes from web pages that use JSON-LD structured data and output Markdown, LaTeX, and PDF."
 groups = ["default"]
 dependencies = [
     "beautifulsoup4>=4.12.3",
@@ -920,8 +920,8 @@ dependencies = [
     "pytest>=8.2.2",
 ]
 files = [
-    {file = "python_recipy-0.1.0-py3-none-any.whl", hash = "sha256:510d1843d37b558b4e0e48713b8ef2fb85781df362b2a1d317c696d8f0e93eb9"},
-    {file = "python_recipy-0.1.0.tar.gz", hash = "sha256:431387418ae17cbf31868b61424a690844d6ee274c25a3667ee1023b724785d6"},
+    {file = "python_recipy-0.1.4-py3-none-any.whl", hash = "sha256:cdfa21283791ee0b70a4d1c8510be778f1f3636ee130f22002b19698e9661128"},
+    {file = "python_recipy-0.1.4.tar.gz", hash = "sha256:9a91b620c32933f001c7ae6a2460fd9340df862e3680b480374d608ee9bff172"},
 ]
 
 [[package]]
