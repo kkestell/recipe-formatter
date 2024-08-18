@@ -6,7 +6,7 @@ from typing import List
 
 from recipy.latex import recipe_to_latex
 from recipy.markdown import recipe_to_markdown
-from recipy.json import recipe_from_url
+from recipy.json_ld import recipe_from_url
 from recipy.models import InstructionGroup, IngredientGroup, Recipe
 from recipy.pdf import recipe_to_pdf
 from rich.console import Console
