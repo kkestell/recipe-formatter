@@ -1,4 +1,4 @@
-from typing import Type, Callable, Optional
+from typing import Type, Callable
 
 import instructor
 from openai import OpenAI
@@ -16,7 +16,8 @@ class OpenAIModelHandler:
             response_model=instructor.Partial[response_model],
             messages=[{"role": "user", "content": prompt}],
             max_tokens=8192,
-            stream=True
+            stream=True,
+            **kwargs
         )
         final_obj = None
         for response in response_stream:

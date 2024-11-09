@@ -16,6 +16,7 @@ from slugify import slugify
 from pydantic import BaseModel
 
 from handlers.openai_handler import OpenAIModelHandler
+from handlers.llama_cpp_handler import LlamaCppModelHandler
 
 
 class RecipeIngredients(BaseModel):
@@ -67,6 +68,15 @@ def main():
     args = parser.parse_args()
 
     config = load_config(args.config)
+    # config = {
+    #     "engine": "openai",
+    #     "openai_model": "gpt-4o-mini",
+    #     "openai_api_key": "sk-proj-xxx"
+    # }
+    # config = {
+    #     "engine": "llamacpp",
+    #     "model": "models/gemma-2-9b-it-Q6_K_L.gguf"
+    # }
 
     console = Console()
 
@@ -75,6 +85,11 @@ def main():
         if not api_key:
             raise ValueError("OpenAI API key not found in config or environment variables")
         llm = OpenAIModelHandler(api_key, model=config.get("openai_model", "gpt-4o-mini"))
+    elif config["engine"] == "llamacpp":
+        model = config.get("model")
+        if not model:
+            raise ValueError("LlamaCpp model not found in config")
+        llm = LlamaCppModelHandler(model)
     else:
         raise ValueError(f"Unsupported engine: {config['engine']}")
 
